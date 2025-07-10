@@ -4,8 +4,8 @@ import { format } from 'date-fns';
 
 export class Formatter {
   formatProgressBar(percentage: number, width = 40): string {
-    const filled = Math.round((percentage / 100) * width);
-    const empty = width - filled;
+    const filled = Math.min(Math.round((percentage / 100) * width), width);
+    const empty = Math.max(width - filled, 0);
     
     let color: typeof chalk.green;
     if (percentage >= 90) {
