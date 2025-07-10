@@ -1,0 +1,17 @@
+src/
+docs/
+python-sample/
+.git/
+.gitignore
+tsconfig.json
+.eslintrc.json
+*.test.ts
+*.spec.ts
+.DS_Store
+node_modules/
+.env
+.env.local
+*.log
+.vscode/
+.idea/
+CLAUDE.md
