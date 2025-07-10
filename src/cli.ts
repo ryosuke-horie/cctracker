@@ -69,13 +69,6 @@ program
       dataPath: options.dataPath,
     });
 
-    console.log('\n📊 Claude Code Usage Status');
-    console.log(`📋 Plan: ${plan}`);
-
-    if (options.dataPath) {
-      console.log(`📁 Data path: ${options.dataPath}`);
-    }
-
     try {
       await monitor.runOnce();
     } catch (error) {

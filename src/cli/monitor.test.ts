@@ -5,6 +5,7 @@ import type { Plan } from '../models/types.js';
 // Type definition for testing private methods
 type MonitorWithPrivateMethods = Monitor & {
   update: () => Promise<void>;
+  updateOnce: () => Promise<void>;
   intervalId?: NodeJS.Timeout;
   isRunning: boolean;
   formatter: {
@@ -46,13 +47,13 @@ describe('Monitor', () => {
       // This test will fail initially as runOnce method doesn't exist yet
       expect(monitor.runOnce).toBeDefined();
       
-      // Mock the private update method
-      const updateSpy = vi.spyOn(monitorWithPrivate, 'update').mockResolvedValue(undefined);
+      // Mock the private updateOnce method
+      const updateOnceSpy = vi.spyOn(monitorWithPrivate, 'updateOnce').mockResolvedValue(undefined);
       
       await monitor.runOnce();
       
-      // Should call update exactly once
-      expect(updateSpy).toHaveBeenCalledTimes(1);
+      // Should call updateOnce exactly once
+      expect(updateOnceSpy).toHaveBeenCalledTimes(1);
       
       // Should not set up any intervals
       expect(monitorWithPrivate.intervalId).toBeUndefined();
@@ -63,7 +64,7 @@ describe('Monitor', () => {
 
     it('should handle errors gracefully during runOnce', async () => {
       const errorMessage = 'Test error';
-      vi.spyOn(monitorWithPrivate, 'update').mockRejectedValue(new Error(errorMessage));
+      vi.spyOn(monitorWithPrivate, 'updateOnce').mockRejectedValue(new Error(errorMessage));
       
       await expect(monitor.runOnce()).rejects.toThrow(errorMessage);
     });
