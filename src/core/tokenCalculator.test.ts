@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { TokenCalculator, PLAN_LIMITS } from './tokenCalculator.js';
-import { UsageEntry, SessionBlock, Plan } from '../models/types.js';
+import { beforeEach, describe, expect, it } from 'vitest';
+import type { SessionBlock, UsageEntry } from '../models/types.js';
+import { PLAN_LIMITS, TokenCalculator } from './tokenCalculator.js';
 
 describe('TokenCalculator', () => {
   let calculator: TokenCalculator;
@@ -12,49 +12,55 @@ describe('TokenCalculator', () => {
   describe('calculateWeightedTokens', () => {
     it('should calculate weighted tokens for Opus model with 5x multiplier', () => {
       // Red: Write failing test first
-      const entries: UsageEntry[] = [{
-        timestamp: new Date(),
-        inputTokens: 100,
-        outputTokens: 50,
-        cacheCreationTokens: 0,
-        cacheReadTokens: 0,
-        model: 'claude-3-opus-20240229'
-      }];
+      const entries: UsageEntry[] = [
+        {
+          timestamp: new Date(),
+          inputTokens: 100,
+          outputTokens: 50,
+          cacheCreationTokens: 0,
+          cacheReadTokens: 0,
+          model: 'claude-3-opus-20240229',
+        },
+      ];
 
       const result = calculator.calculateWeightedTokens(entries);
-      
+
       // Should be (100 + 50) * 5 = 750
       expect(result).toBe(750);
     });
 
     it('should calculate weighted tokens for Sonnet model with 1x multiplier', () => {
-      const entries: UsageEntry[] = [{
-        timestamp: new Date(),
-        inputTokens: 100,
-        outputTokens: 50,
-        cacheCreationTokens: 0,
-        cacheReadTokens: 0,
-        model: 'claude-3-sonnet-20240229'
-      }];
+      const entries: UsageEntry[] = [
+        {
+          timestamp: new Date(),
+          inputTokens: 100,
+          outputTokens: 50,
+          cacheCreationTokens: 0,
+          cacheReadTokens: 0,
+          model: 'claude-3-sonnet-20240229',
+        },
+      ];
 
       const result = calculator.calculateWeightedTokens(entries);
-      
+
       // Should be (100 + 50) * 1 = 150
       expect(result).toBe(150);
     });
 
     it('should calculate weighted tokens for unknown model with 1x multiplier', () => {
-      const entries: UsageEntry[] = [{
-        timestamp: new Date(),
-        inputTokens: 100,
-        outputTokens: 50,
-        cacheCreationTokens: 0,
-        cacheReadTokens: 0,
-        model: 'claude-unknown-model'
-      }];
+      const entries: UsageEntry[] = [
+        {
+          timestamp: new Date(),
+          inputTokens: 100,
+          outputTokens: 50,
+          cacheCreationTokens: 0,
+          cacheReadTokens: 0,
+          model: 'claude-unknown-model',
+        },
+      ];
 
       const result = calculator.calculateWeightedTokens(entries);
-      
+
       // Should be (100 + 50) * 1 = 150
       expect(result).toBe(150);
     });
@@ -67,7 +73,7 @@ describe('TokenCalculator', () => {
           outputTokens: 50,
           cacheCreationTokens: 0,
           cacheReadTokens: 0,
-          model: 'claude-3-opus-20240229'
+          model: 'claude-3-opus-20240229',
         },
         {
           timestamp: new Date(),
@@ -75,12 +81,12 @@ describe('TokenCalculator', () => {
           outputTokens: 100,
           cacheCreationTokens: 0,
           cacheReadTokens: 0,
-          model: 'claude-3-sonnet-20240229'
-        }
+          model: 'claude-3-sonnet-20240229',
+        },
       ];
 
       const result = calculator.calculateWeightedTokens(entries);
-      
+
       // Should be (100 + 50) * 5 + (200 + 100) * 1 = 750 + 300 = 1050
       expect(result).toBe(1050);
     });
@@ -99,27 +105,29 @@ describe('TokenCalculator', () => {
         endTime: new Date(),
         isActive: false,
         isGap: false,
-        entries: [{
-          timestamp: new Date(),
-          inputTokens: 100,
-          outputTokens: 50,
-          cacheCreationTokens: 0,
-          cacheReadTokens: 0,
-          model: 'claude-3-opus-20240229'
-        }],
+        entries: [
+          {
+            timestamp: new Date(),
+            inputTokens: 100,
+            outputTokens: 50,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            model: 'claude-3-opus-20240229',
+          },
+        ],
         tokenCounts: {
           inputTokens: 100,
           outputTokens: 50,
           cacheCreationTokens: 0,
-          cacheReadTokens: 0
+          cacheReadTokens: 0,
         },
         costUSD: 0,
         models: ['claude-3-opus-20240229'],
-        durationMinutes: 60
+        durationMinutes: 60,
       };
 
       const result = calculator.calculateBlockWeightedTokens(block);
-      
+
       // Should be (100 + 50) * 5 = 750
       expect(result).toBe(750);
     });
@@ -134,23 +142,25 @@ describe('TokenCalculator', () => {
           endTime: new Date(),
           isActive: false,
           isGap: false,
-          entries: [{
-            timestamp: new Date(),
-            inputTokens: 100,
-            outputTokens: 50,
-            cacheCreationTokens: 0,
-            cacheReadTokens: 0,
-            model: 'claude-3-opus-20240229'
-          }],
+          entries: [
+            {
+              timestamp: new Date(),
+              inputTokens: 100,
+              outputTokens: 50,
+              cacheCreationTokens: 0,
+              cacheReadTokens: 0,
+              model: 'claude-3-opus-20240229',
+            },
+          ],
           tokenCounts: {
             inputTokens: 100,
             outputTokens: 50,
             cacheCreationTokens: 0,
-            cacheReadTokens: 0
+            cacheReadTokens: 0,
           },
           costUSD: 0,
           models: ['claude-3-opus-20240229'],
-          durationMinutes: 60
+          durationMinutes: 60,
         },
         {
           id: 'gap-1',
@@ -163,11 +173,11 @@ describe('TokenCalculator', () => {
             inputTokens: 0,
             outputTokens: 0,
             cacheCreationTokens: 0,
-            cacheReadTokens: 0
+            cacheReadTokens: 0,
           },
           costUSD: 0,
           models: [],
-          durationMinutes: 120
+          durationMinutes: 120,
         },
         {
           id: 'block-2',
@@ -175,28 +185,30 @@ describe('TokenCalculator', () => {
           endTime: new Date(),
           isActive: false,
           isGap: false,
-          entries: [{
-            timestamp: new Date(),
-            inputTokens: 200,
-            outputTokens: 100,
-            cacheCreationTokens: 0,
-            cacheReadTokens: 0,
-            model: 'claude-3-sonnet-20240229'
-          }],
+          entries: [
+            {
+              timestamp: new Date(),
+              inputTokens: 200,
+              outputTokens: 100,
+              cacheCreationTokens: 0,
+              cacheReadTokens: 0,
+              model: 'claude-3-sonnet-20240229',
+            },
+          ],
           tokenCounts: {
             inputTokens: 200,
             outputTokens: 100,
             cacheCreationTokens: 0,
-            cacheReadTokens: 0
+            cacheReadTokens: 0,
           },
           costUSD: 0,
           models: ['claude-3-sonnet-20240229'],
-          durationMinutes: 30
-        }
+          durationMinutes: 30,
+        },
       ];
 
       const result = calculator.getTotalWeightedTokens(blocks);
-      
+
       // Should be 750 (opus) + 300 (sonnet) = 1050, gap excluded
       expect(result).toBe(1050);
     });
@@ -211,28 +223,30 @@ describe('TokenCalculator', () => {
           endTime: new Date(),
           isActive: true,
           isGap: false,
-          entries: [{
-            timestamp: new Date(),
-            inputTokens: 100,
-            outputTokens: 50,
-            cacheCreationTokens: 0,
-            cacheReadTokens: 0,
-            model: 'claude-3-opus-20240229'
-          }],
+          entries: [
+            {
+              timestamp: new Date(),
+              inputTokens: 100,
+              outputTokens: 50,
+              cacheCreationTokens: 0,
+              cacheReadTokens: 0,
+              model: 'claude-3-opus-20240229',
+            },
+          ],
           tokenCounts: {
             inputTokens: 100,
             outputTokens: 50,
             cacheCreationTokens: 0,
-            cacheReadTokens: 0
+            cacheReadTokens: 0,
           },
           costUSD: 0,
           models: ['claude-3-opus-20240229'],
-          durationMinutes: 60
-        }
+          durationMinutes: 60,
+        },
       ];
 
       const result = calculator.getActiveSessionTokens(blocks);
-      
+
       // Should be (100 + 50) * 5 = 750
       expect(result).toBe(750);
     });
@@ -250,12 +264,12 @@ describe('TokenCalculator', () => {
             inputTokens: 0,
             outputTokens: 0,
             cacheCreationTokens: 0,
-            cacheReadTokens: 0
+            cacheReadTokens: 0,
           },
           costUSD: 0,
           models: [],
-          durationMinutes: 60
-        }
+          durationMinutes: 60,
+        },
       ];
 
       const result = calculator.getActiveSessionTokens(blocks);
@@ -272,23 +286,25 @@ describe('TokenCalculator', () => {
           endTime: new Date(),
           isActive: false,
           isGap: false,
-          entries: [{
-            timestamp: new Date(),
-            inputTokens: 100,
-            outputTokens: 50,
-            cacheCreationTokens: 0,
-            cacheReadTokens: 0,
-            model: 'claude-3-opus-20240229'
-          }],
+          entries: [
+            {
+              timestamp: new Date(),
+              inputTokens: 100,
+              outputTokens: 50,
+              cacheCreationTokens: 0,
+              cacheReadTokens: 0,
+              model: 'claude-3-opus-20240229',
+            },
+          ],
           tokenCounts: {
             inputTokens: 100,
             outputTokens: 50,
             cacheCreationTokens: 0,
-            cacheReadTokens: 0
+            cacheReadTokens: 0,
           },
           costUSD: 0,
           models: ['claude-3-opus-20240229'],
-          durationMinutes: 60
+          durationMinutes: 60,
         },
         {
           id: 'block-2',
@@ -296,28 +312,30 @@ describe('TokenCalculator', () => {
           endTime: new Date(),
           isActive: false,
           isGap: false,
-          entries: [{
-            timestamp: new Date(),
-            inputTokens: 1000,
-            outputTokens: 500,
-            cacheCreationTokens: 0,
-            cacheReadTokens: 0,
-            model: 'claude-3-sonnet-20240229'
-          }],
+          entries: [
+            {
+              timestamp: new Date(),
+              inputTokens: 1000,
+              outputTokens: 500,
+              cacheCreationTokens: 0,
+              cacheReadTokens: 0,
+              model: 'claude-3-sonnet-20240229',
+            },
+          ],
           tokenCounts: {
             inputTokens: 1000,
             outputTokens: 500,
             cacheCreationTokens: 0,
-            cacheReadTokens: 0
+            cacheReadTokens: 0,
           },
           costUSD: 0,
           models: ['claude-3-sonnet-20240229'],
-          durationMinutes: 60
-        }
+          durationMinutes: 60,
+        },
       ];
 
       const result = calculator.detectMaxTokensFromHistory(blocks);
-      
+
       // Should be max of: 750 (opus) and 1500 (sonnet) = 1500
       expect(result).toBe(1500);
     });
@@ -337,28 +355,30 @@ describe('TokenCalculator', () => {
           endTime: new Date(),
           isActive: false,
           isGap: false,
-          entries: [{
-            timestamp: new Date(),
-            inputTokens: 1000,
-            outputTokens: 500,
-            cacheCreationTokens: 0,
-            cacheReadTokens: 0,
-            model: 'claude-3-sonnet-20240229'
-          }],
+          entries: [
+            {
+              timestamp: new Date(),
+              inputTokens: 1000,
+              outputTokens: 500,
+              cacheCreationTokens: 0,
+              cacheReadTokens: 0,
+              model: 'claude-3-sonnet-20240229',
+            },
+          ],
           tokenCounts: {
             inputTokens: 1000,
             outputTokens: 500,
             cacheCreationTokens: 0,
-            cacheReadTokens: 0
+            cacheReadTokens: 0,
           },
           costUSD: 0,
           models: ['claude-3-sonnet-20240229'],
-          durationMinutes: 60
-        }
+          durationMinutes: 60,
+        },
       ];
 
       const result = calculator.determinePlanLimit('custom_max', blocks);
-      
+
       // Should return detected max tokens: 1500
       expect(result).toBe(1500);
     });

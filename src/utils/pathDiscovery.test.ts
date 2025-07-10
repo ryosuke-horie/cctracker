@@ -1,13 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  getStandardClaudePaths,
-  parsePathList,
-  getDefaultDataPaths
-} from './pathDiscovery.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getDefaultDataPaths, getStandardClaudePaths, parsePathList } from './pathDiscovery.js';
 
 // Mock OS module
 vi.mock('os', () => ({
-  homedir: vi.fn(() => '/home/testuser')
+  homedir: vi.fn(() => '/home/testuser'),
 }));
 
 describe('pathDiscovery', () => {
@@ -21,10 +17,10 @@ describe('pathDiscovery', () => {
   describe('getStandardClaudePaths', () => {
     it('should return standard Claude paths based on home directory', () => {
       const paths = getStandardClaudePaths();
-      
+
       expect(paths).toEqual([
         '/home/testuser/.claude/projects',
-        '/home/testuser/.config/claude/projects'
+        '/home/testuser/.config/claude/projects',
       ]);
     });
   });
@@ -54,14 +50,14 @@ describe('pathDiscovery', () => {
   describe('getDefaultDataPaths', () => {
     it('should use CLAUDE_DATA_PATHS environment variable when set', () => {
       process.env.CLAUDE_DATA_PATHS = '/env/path1:/env/path2';
-      
+
       const result = getDefaultDataPaths();
       expect(result).toEqual(['/env/path1', '/env/path2']);
     });
 
     it('should use CLAUDE_DATA_PATH environment variable when set', () => {
       process.env.CLAUDE_DATA_PATH = '/single/env/path';
-      
+
       const result = getDefaultDataPaths();
       expect(result).toEqual(['/single/env/path']);
     });
@@ -70,7 +66,7 @@ describe('pathDiscovery', () => {
       const result = getDefaultDataPaths();
       expect(result).toEqual([
         '/home/testuser/.claude/projects',
-        '/home/testuser/.config/claude/projects'
+        '/home/testuser/.config/claude/projects',
       ]);
     });
   });

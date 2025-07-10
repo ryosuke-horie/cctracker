@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import type { SessionBlock } from '../models/types.js';
 import { PlanDetector } from './planDetector.js';
-import { SessionBlock, UsageEntry } from '../models/types.js';
-import { PLAN_LIMITS } from './tokenCalculator.js';
 
 describe('PlanDetector', () => {
   let detector: PlanDetector;
@@ -11,33 +10,38 @@ describe('PlanDetector', () => {
   });
 
   // Helper function to create mock session blocks
-  const createMockBlock = (tokenUsage: number, model: string = 'claude-3-sonnet-20240229'): SessionBlock => {
+  const createMockBlock = (
+    tokenUsage: number,
+    model: string = 'claude-3-sonnet-20240229'
+  ): SessionBlock => {
     const inputTokens = Math.floor(tokenUsage / 2);
     const outputTokens = tokenUsage - inputTokens;
-    
+
     return {
       id: `block-${Date.now()}`,
       startTime: new Date(),
       endTime: new Date(),
       isActive: false,
       isGap: false,
-      entries: [{
-        timestamp: new Date(),
-        inputTokens,
-        outputTokens,
-        cacheCreationTokens: 0,
-        cacheReadTokens: 0,
-        model
-      }],
+      entries: [
+        {
+          timestamp: new Date(),
+          inputTokens,
+          outputTokens,
+          cacheCreationTokens: 0,
+          cacheReadTokens: 0,
+          model,
+        },
+      ],
       tokenCounts: {
         inputTokens,
         outputTokens,
         cacheCreationTokens: 0,
-        cacheReadTokens: 0
+        cacheReadTokens: 0,
       },
       costUSD: 0,
       models: [model],
-      durationMinutes: 60
+      durationMinutes: 60,
     };
   };
 
@@ -46,7 +50,7 @@ describe('PlanDetector', () => {
       // Create blocks with usage well within Pro limits
       const blocks = [
         createMockBlock(5000), // Well within Pro limit
-        createMockBlock(3000)
+        createMockBlock(3000),
       ];
 
       const result = detector.detectPlan(blocks);
@@ -57,7 +61,7 @@ describe('PlanDetector', () => {
       // Create blocks with usage exceeding Pro but within Max5
       const blocks = [
         createMockBlock(180000), // Above Pro (44000) but within Max5 threshold
-        createMockBlock(150000)
+        createMockBlock(150000),
       ];
 
       const result = detector.detectPlan(blocks);
@@ -68,7 +72,7 @@ describe('PlanDetector', () => {
       // Create blocks with usage exceeding Max5 limits
       const blocks = [
         createMockBlock(750000), // Above Max5 (220000) threshold
-        createMockBlock(600000)
+        createMockBlock(600000),
       ];
 
       const result = detector.detectPlan(blocks);
@@ -78,7 +82,7 @@ describe('PlanDetector', () => {
     it('should upgrade Pro to Max5 when usage exceeds Pro limits', () => {
       // Usage exceeds Pro limit but is not quite at Max5 threshold
       const blocks = [
-        createMockBlock(50000) // Exceeds Pro limit (44000)
+        createMockBlock(50000), // Exceeds Pro limit (44000)
       ];
 
       const result = detector.detectPlan(blocks);
@@ -94,7 +98,7 @@ describe('PlanDetector', () => {
       // Create block with Opus model (5x weighting)
       const block = createMockBlock(10000, 'claude-3-opus-20240229');
       // With 5x weighting: 10000 * 5 = 50000, which exceeds Pro
-      
+
       const result = detector.detectPlan([block]);
       expect(result).toBe('max5');
     });
@@ -103,7 +107,7 @@ describe('PlanDetector', () => {
   describe('analyzePlanUsage', () => {
     it('should provide detailed analysis with high confidence for clear Max20 usage', () => {
       const blocks = [
-        createMockBlock(850000) // Very close to Max20 limit
+        createMockBlock(850000), // Very close to Max20 limit
       ];
 
       const analysis = detector.analyzePlanUsage(blocks);
@@ -116,7 +120,7 @@ describe('PlanDetector', () => {
 
     it('should provide medium confidence for borderline usage', () => {
       const blocks = [
-        createMockBlock(40000) // Near Pro threshold but not exceeding
+        createMockBlock(40000), // Near Pro threshold but not exceeding
       ];
 
       const analysis = detector.analyzePlanUsage(blocks);
@@ -137,7 +141,7 @@ describe('PlanDetector', () => {
 
     it('should detect when usage exceeds Pro limits', () => {
       const blocks = [
-        createMockBlock(50000) // Exceeds Pro limit
+        createMockBlock(50000), // Exceeds Pro limit
       ];
 
       const analysis = detector.analyzePlanUsage(blocks);
@@ -150,9 +154,9 @@ describe('PlanDetector', () => {
   describe('estimateActualTokens', () => {
     it('should estimate actual tokens from weighted tokens with mixed models', () => {
       const blocks = [
-        createMockBlock(10000, 'claude-3-opus-20240229'),    // 1 Opus entry
-        createMockBlock(10000, 'claude-3-sonnet-20240229'),  // 1 Sonnet entry
-        createMockBlock(10000, 'claude-3-sonnet-20240229'),  // Another Sonnet entry
+        createMockBlock(10000, 'claude-3-opus-20240229'), // 1 Opus entry
+        createMockBlock(10000, 'claude-3-sonnet-20240229'), // 1 Sonnet entry
+        createMockBlock(10000, 'claude-3-sonnet-20240229'), // Another Sonnet entry
       ];
 
       // With the above: 1 Opus, 2 Sonnet entries
@@ -170,7 +174,7 @@ describe('PlanDetector', () => {
     it('should return same value for all Sonnet models', () => {
       const blocks = [
         createMockBlock(10000, 'claude-3-sonnet-20240229'),
-        createMockBlock(10000, 'claude-3-sonnet-20240229')
+        createMockBlock(10000, 'claude-3-sonnet-20240229'),
       ];
 
       const weightedTokens = 20000; // No weighting for Sonnet
@@ -187,7 +191,7 @@ describe('PlanDetector', () => {
     it('should handle all Opus models correctly', () => {
       const blocks = [
         createMockBlock(10000, 'claude-3-opus-20240229'),
-        createMockBlock(10000, 'claude-3-opus-20240229')
+        createMockBlock(10000, 'claude-3-opus-20240229'),
       ];
 
       // All Opus: ratio = 1.0, average weight = 5
@@ -215,11 +219,11 @@ describe('PlanDetector', () => {
           inputTokens: 0,
           outputTokens: 0,
           cacheCreationTokens: 0,
-          cacheReadTokens: 0
+          cacheReadTokens: 0,
         },
         costUSD: 0,
         models: [],
-        durationMinutes: 120
+        durationMinutes: 120,
       };
 
       const blocks = [regularBlock, gapBlock];
@@ -247,12 +251,12 @@ describe('PlanDetector', () => {
       const blocks = [
         createMockBlock(10000, 'claude-opus-experimental'),
         createMockBlock(10000, 'new-sonnet-model'),
-        createMockBlock(10000, 'unknown-model')
+        createMockBlock(10000, 'unknown-model'),
       ];
 
       // Should detect opus in first model name
       const analysis = detector.analyzePlanUsage(blocks);
-      
+
       // With opus weighting: first block is 10000 tokens -> (5000+5000)*5 = 50000 (max)
       // Other blocks: 10000 each (no weighting)
       // Max value should be 50000

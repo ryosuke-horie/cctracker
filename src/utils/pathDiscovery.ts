@@ -1,14 +1,11 @@
-import { homedir } from 'os';
-import { join, resolve } from 'path';
-import { existsSync, statSync } from 'fs';
-import { readdir } from 'fs/promises';
+import { existsSync, statSync } from 'node:fs';
+import { readdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
 
 export function getStandardClaudePaths(): string[] {
   const home = homedir();
-  return [
-    join(home, '.claude', 'projects'),
-    join(home, '.config', 'claude', 'projects')
-  ];
+  return [join(home, '.claude', 'projects'), join(home, '.config', 'claude', 'projects')];
 }
 
 export async function discoverClaudeDataPaths(customPaths?: string[]): Promise<string[]> {
@@ -35,11 +32,11 @@ export async function findJsonlFiles(dataPaths: string[]): Promise<string[]> {
     }
 
     const files = await findJsonlFilesRecursive(dataPath);
-    
+
     for (const file of files) {
       const stat = statSync(file);
       const fileSignature = `${file.split('/').pop()}-${stat.size}-${Math.floor(stat.mtimeMs)}`;
-      
+
       if (!seenFiles.has(fileSignature)) {
         seenFiles.add(fileSignature);
         allFiles.push(file);
@@ -56,13 +53,13 @@ export async function findJsonlFiles(dataPaths: string[]): Promise<string[]> {
 
 async function findJsonlFilesRecursive(dir: string): Promise<string[]> {
   const results: string[] = [];
-  
+
   try {
     const entries = await readdir(dir, { withFileTypes: true });
-    
+
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
-      
+
       if (entry.isDirectory()) {
         const subResults = await findJsonlFilesRecursive(fullPath);
         results.push(...subResults);
@@ -70,10 +67,10 @@ async function findJsonlFilesRecursive(dir: string): Promise<string[]> {
         results.push(fullPath);
       }
     }
-  } catch (error) {
+  } catch (_error) {
     // Skip directories we can't read
   }
-  
+
   return results;
 }
 
@@ -94,8 +91,8 @@ export function parsePathList(pathString: string, separator?: string): string[] 
 
   return pathString
     .split(separator)
-    .map(path => path.trim())
-    .filter(path => path.length > 0);
+    .map((path) => path.trim())
+    .filter((path) => path.length > 0);
 }
 
 export function getDefaultDataPaths(): string[] {

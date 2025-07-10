@@ -1,7 +1,11 @@
-import { createReadStream } from 'fs';
-import { createInterface } from 'readline';
-import { UsageEntry, RawUsageData } from '../models/types.js';
-import { discoverClaudeDataPaths, findJsonlFiles, getDefaultDataPaths } from '../utils/pathDiscovery.js';
+import { createReadStream } from 'node:fs';
+import { createInterface } from 'node:readline';
+import type { RawUsageData, UsageEntry } from '../models/types.js';
+import {
+  discoverClaudeDataPaths,
+  findJsonlFiles,
+  getDefaultDataPaths,
+} from '../utils/pathDiscovery.js';
 
 export class DataLoader {
   private dataPath: string | null = null;
@@ -11,8 +15,8 @@ export class DataLoader {
   }
 
   async loadUsageData(): Promise<UsageEntry[]> {
-    const paths = this.dataPath 
-      ? [this.dataPath] 
+    const paths = this.dataPath
+      ? [this.dataPath]
       : await discoverClaudeDataPaths(getDefaultDataPaths());
 
     if (paths.length === 0) {
@@ -36,14 +40,14 @@ export class DataLoader {
   }
 
   private async parseJsonlFile(
-    filePath: string, 
+    filePath: string,
     processedHashes: Set<string>
   ): Promise<UsageEntry[]> {
     const entries: UsageEntry[] = [];
     const fileStream = createReadStream(filePath);
     const rl = createInterface({
       input: fileStream,
-      crlfDelay: Infinity
+      crlfDelay: Infinity,
     });
 
     for await (const line of rl) {
@@ -51,7 +55,7 @@ export class DataLoader {
 
       try {
         const data: RawUsageData = JSON.parse(line);
-        
+
         const uniqueHash = this.createUniqueHash(data);
         if (uniqueHash && processedHashes.has(uniqueHash)) {
           continue;
@@ -64,7 +68,7 @@ export class DataLoader {
             processedHashes.add(uniqueHash);
           }
         }
-      } catch (error) {
+      } catch (_error) {
         // Skip invalid JSON lines
       }
     }
@@ -96,7 +100,7 @@ export class DataLoader {
       }
 
       const timestamp = new Date(data.timestamp);
-      if (isNaN(timestamp.getTime())) {
+      if (Number.isNaN(timestamp.getTime())) {
         return null;
       }
 
@@ -124,9 +128,9 @@ export class DataLoader {
         costUSD,
         model,
         messageId,
-        requestId
+        requestId,
       };
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }

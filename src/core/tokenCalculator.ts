@@ -1,9 +1,9 @@
-import { UsageEntry, SessionBlock, Plan, PlanLimits } from '../models/types.js';
+import type { Plan, PlanLimits, SessionBlock, UsageEntry } from '../models/types.js';
 
 export const PLAN_LIMITS: PlanLimits = {
-  pro: 44000,    // ~7,000 actual tokens with 5x weighting
-  max5: 220000,  // ~35,000 actual tokens with 5x weighting
-  max20: 880000  // ~140,000 actual tokens with 5x weighting
+  pro: 44000, // ~7,000 actual tokens with 5x weighting
+  max5: 220000, // ~35,000 actual tokens with 5x weighting
+  max20: 880000, // ~140,000 actual tokens with 5x weighting
 };
 
 export class TokenCalculator {
@@ -35,13 +35,13 @@ export class TokenCalculator {
 
   getTotalWeightedTokens(blocks: SessionBlock[]): number {
     return blocks
-      .filter(block => !block.isGap)
+      .filter((block) => !block.isGap)
       .reduce((total, block) => total + this.calculateBlockWeightedTokens(block), 0);
   }
 
   getActiveSessionTokens(blocks: SessionBlock[]): number {
-    const activeBlocks = blocks.filter(block => block.isActive && !block.isGap);
-    
+    const activeBlocks = blocks.filter((block) => block.isActive && !block.isGap);
+
     if (activeBlocks.length === 0) {
       return 0;
     }

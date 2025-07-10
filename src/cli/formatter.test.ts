@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SessionBlock } from '../models/types.js';
 import { Formatter } from './formatter.js';
-import { SessionBlock, Plan } from '../models/types.js';
 
 describe('Formatter', () => {
   let formatter: Formatter;
@@ -87,10 +87,15 @@ describe('Formatter', () => {
         isActive: true,
         isGap: false,
         entries: [],
-        tokenCounts: { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 },
+        tokenCounts: {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationTokens: 0,
+          cacheReadTokens: 0,
+        },
         costUSD: 0,
         models: [],
-        durationMinutes: 0
+        durationMinutes: 0,
       };
 
       const result = formatter.formatSessionInfo(mockBlock);

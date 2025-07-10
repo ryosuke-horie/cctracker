@@ -1,10 +1,10 @@
-import { Plan, BurnRate, SessionBlock, UsageProjection } from '../models/types.js';
+import { isBefore } from 'date-fns';
+import { BurnRateCalculator } from '../core/burnRateCalculator.js';
 import { DataLoader } from '../core/dataLoader.js';
 import { SessionIdentifier } from '../core/sessionIdentifier.js';
 import { TokenCalculator } from '../core/tokenCalculator.js';
-import { BurnRateCalculator } from '../core/burnRateCalculator.js';
+import type { BurnRate, Plan, SessionBlock, UsageProjection } from '../models/types.js';
 import { Formatter } from './formatter.js';
-import { isBefore } from 'date-fns';
 
 interface MonitorOptions {
   plan: Plan;
@@ -34,10 +34,10 @@ export class Monitor {
   async start(): Promise<void> {
     this.isRunning = true;
     this.formatter.hideCursor();
-    
+
     // Initial display
     await this.update();
-    
+
     // Set up refresh interval
     const refreshInterval = this.options.refreshInterval || 3000;
     this.intervalId = setInterval(async () => {
@@ -45,7 +45,7 @@ export class Monitor {
         await this.update();
       }
     }, refreshInterval);
-    
+
     // Handle graceful shutdown
     process.on('SIGINT', () => this.stop());
     process.on('SIGTERM', () => this.stop());
@@ -53,13 +53,13 @@ export class Monitor {
 
   async stop(): Promise<void> {
     this.isRunning = false;
-    
+
     if (this.intervalId) {
       clearInterval(this.intervalId);
     }
-    
+
     this.formatter.showCursor();
-    console.log('\n' + this.formatter.formatSuccess('Monitor stopped'));
+    console.log(`\n${this.formatter.formatSuccess('Monitor stopped')}`);
     process.exit(0);
   }
 
@@ -68,30 +68,32 @@ export class Monitor {
       // Load and process data
       const entries = await this.dataLoader.loadUsageData();
       const blocks = this.sessionIdentifier.createSessionBlocks(entries);
-      
+
       // Find active session
-      const activeBlock = blocks.find(b => b.isActive && !b.isGap) || null;
-      
+      const activeBlock = blocks.find((b) => b.isActive && !b.isGap) || null;
+
       // Calculate metrics
-      const currentTokens = activeBlock 
+      const currentTokens = activeBlock
         ? this.tokenCalculator.calculateBlockWeightedTokens(activeBlock)
         : 0;
-      
+
       const limit = this.tokenCalculator.determinePlanLimit(this.options.plan, blocks);
       const percentage = this.tokenCalculator.calculateTokenPercentage(currentTokens, limit);
       const burnRate = this.burnRateCalculator.calculateHourlyBurnRate(blocks);
       const burnRateIndicator = this.burnRateCalculator.getBurnRateIndicator(
         burnRate.tokensPerMinute
       );
-      
+
       // Check for plan auto-switching
       if (this.options.plan === 'pro' && currentTokens > 44000) {
         this.options.plan = 'custom_max';
-        console.log(this.formatter.formatWarning(
-          'Detected usage above Pro limit. Switching to custom_max mode.'
-        ));
+        console.log(
+          this.formatter.formatWarning(
+            'Detected usage above Pro limit. Switching to custom_max mode.'
+          )
+        );
       }
-      
+
       // Calculate projections
       const projection = this.burnRateCalculator.projectUsage(
         activeBlock,
@@ -99,13 +101,13 @@ export class Monitor {
         limit,
         burnRate
       );
-      
+
       const depletionTime = this.burnRateCalculator.calculateDepletionTime(
         currentTokens,
         limit,
         burnRate
       );
-      
+
       // Display
       this.display({
         plan: this.options.plan,
@@ -116,13 +118,14 @@ export class Monitor {
         burnRateIndicator,
         activeBlock,
         projection,
-        depletionTime
+        depletionTime,
       });
-      
     } catch (error) {
-      console.error(this.formatter.formatError(
-        `Error updating monitor: ${error instanceof Error ? error.message : 'Unknown error'}`
-      ));
+      console.error(
+        this.formatter.formatError(
+          `Error updating monitor: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
+      );
     }
   }
 
@@ -138,40 +141,34 @@ export class Monitor {
     depletionTime: Date | null;
   }): void {
     this.formatter.clearScreen();
-    
+
     console.log('\n🎯 Claude Code Usage Monitor\n');
     console.log(`Plan: ${this.formatter.formatPlan(data.plan)}`);
     console.log('─'.repeat(60));
-    
+
     // Token usage
-    console.log(this.formatter.formatTokenStatus(
-      data.currentTokens,
-      data.limit,
-      data.percentage
-    ));
+    console.log(this.formatter.formatTokenStatus(data.currentTokens, data.limit, data.percentage));
     console.log(this.formatter.formatProgressBar(data.percentage));
-    
+
     console.log('─'.repeat(60));
-    
+
     // Burn rate
     console.log(this.formatter.formatBurnRate(data.burnRate, data.burnRateIndicator));
-    
+
     // Session info
     console.log(this.formatter.formatSessionInfo(data.activeBlock));
-    
+
     // Warnings
     if (data.depletionTime && data.activeBlock) {
       if (isBefore(data.depletionTime, data.activeBlock.endTime)) {
-        console.log(this.formatter.formatWarning(
-          `Tokens will deplete before session reset!`
-        ));
+        console.log(this.formatter.formatWarning(`Tokens will deplete before session reset!`));
       }
     }
-    
+
     if (data.percentage >= 90) {
       console.log(this.formatter.formatWarning('Token limit nearly reached!'));
     }
-    
-    console.log('\n' + this.formatter.formatSuccess('Press Ctrl+C to exit'));
+
+    console.log(`\n${this.formatter.formatSuccess('Press Ctrl+C to exit')}`);
   }
 }

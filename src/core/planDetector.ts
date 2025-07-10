@@ -1,5 +1,5 @@
-import { SessionBlock, Plan } from '../models/types.js';
-import { TokenCalculator, PLAN_LIMITS } from './tokenCalculator.js';
+import type { Plan, SessionBlock } from '../models/types.js';
+import { PLAN_LIMITS, TokenCalculator } from './tokenCalculator.js';
 
 export class PlanDetector {
   private tokenCalculator: TokenCalculator;
@@ -14,7 +14,7 @@ export class PlanDetector {
   detectPlan(blocks: SessionBlock[]): Plan {
     // 過去のセッションから最大トークン使用量を取得
     const maxTokensUsed = this.tokenCalculator.detectMaxTokensFromHistory(blocks);
-    
+
     if (maxTokensUsed === 0) {
       // データがない場合はProをデフォルトとする
       return 'pro';
@@ -51,7 +51,7 @@ export class PlanDetector {
   } {
     const maxTokensUsed = this.tokenCalculator.detectMaxTokensFromHistory(blocks);
     const detectedPlan = this.detectPlan(blocks);
-    
+
     let confidence: 'high' | 'medium' | 'low' = 'low';
     let recommendation: string | undefined;
 
@@ -79,7 +79,7 @@ export class PlanDetector {
       detectedPlan,
       maxTokensUsed,
       confidence,
-      recommendation
+      recommendation,
     };
   }
 
@@ -109,7 +109,7 @@ export class PlanDetector {
     // Opusの使用比率から平均的な重み付け係数を推定
     const opusRatio = opusCount / totalCount;
     const averageWeight = opusRatio * 5 + (1 - opusRatio) * 1;
-    
+
     return Math.round(weightedTokens / averageWeight);
   }
 }

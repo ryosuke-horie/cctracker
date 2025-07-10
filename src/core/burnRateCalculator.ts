@@ -1,5 +1,5 @@
-import { SessionBlock, BurnRate, UsageProjection } from '../models/types.js';
-import { subHours, isAfter, isBefore, differenceInMinutes, addMinutes } from 'date-fns';
+import { addMinutes, differenceInMinutes, isAfter, isBefore, subHours } from 'date-fns';
+import type { BurnRate, SessionBlock, UsageProjection } from '../models/types.js';
 import { TokenCalculator } from './tokenCalculator.js';
 
 export class BurnRateCalculator {
@@ -12,7 +12,7 @@ export class BurnRateCalculator {
   calculateHourlyBurnRate(blocks: SessionBlock[]): BurnRate {
     const now = new Date();
     const oneHourAgo = subHours(now, 1);
-    
+
     let totalTokens = 0;
     let totalMinutes = 0;
 
@@ -20,30 +20,27 @@ export class BurnRateCalculator {
       if (block.isGap) continue;
 
       // Check if block overlaps with the last hour
-      if (isAfter(block.endTime, oneHourAgo) || 
-          (block.actualEndTime && isAfter(block.actualEndTime, oneHourAgo))) {
-        
-        const blockStart = isAfter(block.startTime, oneHourAgo) 
-          ? block.startTime 
-          : oneHourAgo;
-        
+      if (
+        isAfter(block.endTime, oneHourAgo) ||
+        (block.actualEndTime && isAfter(block.actualEndTime, oneHourAgo))
+      ) {
+        const blockStart = isAfter(block.startTime, oneHourAgo) ? block.startTime : oneHourAgo;
+
         const blockEnd = block.actualEndTime || now;
         const effectiveEnd = isBefore(blockEnd, now) ? blockEnd : now;
-        
+
         const minutes = differenceInMinutes(effectiveEnd, blockStart);
-        
+
         if (minutes > 0) {
           // Calculate proportional tokens for the time window
           const blockTokens = this.tokenCalculator.calculateBlockWeightedTokens(block);
-          const blockDuration = block.durationMinutes || differenceInMinutes(
-            block.actualEndTime || now,
-            block.startTime
-          );
-          
-          const proportionalTokens = blockDuration > 0 
-            ? (blockTokens * minutes) / blockDuration
-            : 0;
-          
+          const blockDuration =
+            block.durationMinutes ||
+            differenceInMinutes(block.actualEndTime || now, block.startTime);
+
+          const proportionalTokens =
+            blockDuration > 0 ? (blockTokens * minutes) / blockDuration : 0;
+
           totalTokens += proportionalTokens;
           totalMinutes += minutes;
         }
@@ -52,13 +49,13 @@ export class BurnRateCalculator {
 
     const tokensPerMinute = totalMinutes > 0 ? totalTokens / totalMinutes : 0;
     const tokensPerHour = tokensPerMinute * 60;
-    
+
     // Rough cost estimation (can be improved with actual pricing data)
     const costPerHour = tokensPerHour * 0.00001; // Placeholder rate
 
     return {
       tokensPerMinute,
-      costPerHour
+      costPerHour,
     };
   }
 
@@ -74,21 +71,21 @@ export class BurnRateCalculator {
 
     const now = new Date();
     const remainingMinutes = differenceInMinutes(activeBlock.endTime, now);
-    
+
     if (remainingMinutes <= 0) {
       return null;
     }
 
     const projectedAdditionalTokens = burnRate.tokensPerMinute * remainingMinutes;
     const projectedTotalTokens = currentTokens + projectedAdditionalTokens;
-    
+
     // Rough cost projection
     const projectedTotalCost = projectedTotalTokens * 0.00001;
 
     return {
       projectedTotalTokens,
       projectedTotalCost,
-      remainingMinutes
+      remainingMinutes,
     };
   }
 
@@ -103,7 +100,7 @@ export class BurnRateCalculator {
 
     const remainingTokens = tokenLimit - currentTokens;
     const minutesToDepletion = remainingTokens / burnRate.tokensPerMinute;
-    
+
     return addMinutes(new Date(), minutesToDepletion);
   }
 
