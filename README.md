@@ -8,7 +8,8 @@ cctrackerは、Claude AIのトークン使用量をリアルタイムで監視�
 
 ## 特徴
 
-- 🔄 **リアルタイム監視** - 3秒ごとに使用状況を更新
+- 📊 **クイック確認** - 現在の使用状況を即座に表示して終了（デフォルト動作）
+- 🔄 **リアルタイム監視** - watchモードで3秒ごとに使用状況を継続更新
 - 📊 **視覚的なプログレスバー** - トークン使用率を色分けして表示
 - 🔮 **スマート予測** - 現在の消費速度から枯渇時刻を予測
 - 🤖 **自動プラン検出** - 過去の使用履歴から利用中のプランを自動判定
@@ -44,20 +45,23 @@ npm run dev
 ### 基本的な使用方法
 
 ```bash
-# 自動プラン検出で起動（推奨）
+# 現在の使用状況を確認（単発実行、デフォルト）
 npx cctracker
 
-# 手動でプランを指定
-npx cctracker --plan max5
+# 継続的に監視（watchモード）
+npx cctracker watch
 
-# 自動検出を無効化してProプランで起動
+# watchモードで手動プランを指定
+npx cctracker watch --plan max5
+
+# watchモードでリフレッシュ間隔を変更（秒単位）
+npx cctracker watch --refresh 5
+
+# 自動検出を無効化してProプランで確認
 npx cctracker --plan pro --no-auto-detect
 
 # カスタムデータパスを指定
 npx cctracker --data-path /path/to/claude/data
-
-# リフレッシュ間隔を変更（秒単位）
-npx cctracker --refresh 5
 
 # 使用状況の詳細情報を確認
 npx cctracker info

@@ -63,6 +63,11 @@ export class Monitor {
     process.exit(0);
   }
 
+  async runOnce(): Promise<void> {
+    // One-time execution without setting up intervals or cursor management
+    await this.update();
+  }
+
   private async update(): Promise<void> {
     try {
       // Load and process data
