@@ -63,6 +63,11 @@ export class Monitor {
     process.exit(0);
   }
 
+  async runOnce(): Promise<void> {
+    // One-time execution without setting up intervals or cursor management
+    await this.updateOnce();
+  }
+
   private async update(): Promise<void> {
     try {
       // Load and process data
@@ -170,5 +175,112 @@ export class Monitor {
     }
 
     console.log(`\n${this.formatter.formatSuccess('Press Ctrl+C to exit')}`);
+  }
+
+  private async updateOnce(): Promise<void> {
+    try {
+      // Load and process data
+      const entries = await this.dataLoader.loadUsageData();
+      const blocks = this.sessionIdentifier.createSessionBlocks(entries);
+
+      // Find active session
+      const activeBlock = blocks.find((b) => b.isActive && !b.isGap) || null;
+
+      // Calculate metrics
+      const currentTokens = activeBlock
+        ? this.tokenCalculator.calculateBlockWeightedTokens(activeBlock)
+        : 0;
+
+      const limit = this.tokenCalculator.determinePlanLimit(this.options.plan, blocks);
+      const percentage = this.tokenCalculator.calculateTokenPercentage(currentTokens, limit);
+      const burnRate = this.burnRateCalculator.calculateHourlyBurnRate(blocks);
+      const burnRateIndicator = this.burnRateCalculator.getBurnRateIndicator(
+        burnRate.tokensPerMinute
+      );
+
+      // Check for plan auto-switching
+      if (this.options.plan === 'pro' && currentTokens > 44000) {
+        this.options.plan = 'custom_max';
+        console.log(
+          this.formatter.formatWarning(
+            'Detected usage above Pro limit. Switching to custom_max mode.'
+          )
+        );
+      }
+
+      // Calculate projections
+      const projection = this.burnRateCalculator.projectUsage(
+        activeBlock,
+        currentTokens,
+        limit,
+        burnRate
+      );
+
+      const depletionTime = this.burnRateCalculator.calculateDepletionTime(
+        currentTokens,
+        limit,
+        burnRate
+      );
+
+      // Display for single run (no screen clear, no exit message)
+      this.displayOnce({
+        plan: this.options.plan,
+        currentTokens,
+        limit,
+        percentage,
+        burnRate,
+        burnRateIndicator,
+        activeBlock,
+        projection,
+        depletionTime,
+      });
+    } catch (error) {
+      console.error(
+        this.formatter.formatError(
+          `Error fetching usage data: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
+      );
+    }
+  }
+
+  private displayOnce(data: {
+    plan: Plan;
+    currentTokens: number;
+    limit: number;
+    percentage: number;
+    burnRate: BurnRate;
+    burnRateIndicator: string;
+    activeBlock: SessionBlock | null;
+    projection: UsageProjection | null;
+    depletionTime: Date | null;
+  }): void {
+    // No screen clear for single run
+    console.log('\n🎯 Claude Code Usage Status\n');
+    console.log(`Plan: ${this.formatter.formatPlan(data.plan)}`);
+    console.log('─'.repeat(60));
+
+    // Token usage
+    console.log(this.formatter.formatTokenStatus(data.currentTokens, data.limit, data.percentage));
+    console.log(this.formatter.formatProgressBar(data.percentage));
+
+    console.log('─'.repeat(60));
+
+    // Burn rate
+    console.log(this.formatter.formatBurnRate(data.burnRate, data.burnRateIndicator));
+
+    // Session info
+    console.log(this.formatter.formatSessionInfo(data.activeBlock));
+
+    // Warnings
+    if (data.depletionTime && data.activeBlock) {
+      if (isBefore(data.depletionTime, data.activeBlock.endTime)) {
+        console.log(this.formatter.formatWarning(`Tokens will deplete before session reset!`));
+      }
+    }
+
+    if (data.percentage >= 90) {
+      console.log(this.formatter.formatWarning('Token limit nearly reached!'));
+    }
+    // No "Press Ctrl+C to exit" message for single run
   }
 }

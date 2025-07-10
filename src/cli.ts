@@ -23,7 +23,6 @@ program
 program
   .option('-p, --plan <type>', 'Subscription plan (pro, max5, max20, custom_max, auto)', 'auto')
   .option('-d, --data-path <path>', 'Custom path to Claude data directory')
-  .option('-r, --refresh <seconds>', 'Refresh interval in seconds', '3')
   .option('--no-auto-detect', 'Disable automatic plan detection')
   .action(async (options) => {
     // Handle plan detection
@@ -64,32 +63,16 @@ program
       plan = options.plan as Plan;
     }
 
-    // Parse refresh interval
-    const refreshInterval = parseInt(options.refresh) * 1000;
-    if (Number.isNaN(refreshInterval) || refreshInterval < 1000) {
-      console.error('Refresh interval must be at least 1 second');
-      process.exit(1);
-    }
-
-    // Create and start monitor
+    // Create monitor
     const monitor = new Monitor({
       plan,
       dataPath: options.dataPath,
-      refreshInterval,
     });
 
-    console.log('\n🚀 Starting Claude Code Usage Monitor...');
-    console.log(`📋 Plan: ${plan}`);
-    console.log(`🔄 Refresh interval: ${options.refresh}s`);
-
-    if (options.dataPath) {
-      console.log(`📁 Data path: ${options.dataPath}`);
-    }
-
     try {
-      await monitor.start();
+      await monitor.runOnce();
     } catch (error) {
-      console.error('Failed to start monitor:', error);
+      console.error('Failed to fetch usage data:', error);
       process.exit(1);
     }
   });
@@ -151,6 +134,81 @@ program
     console.log('  - Use --data-path option to override the default path');
     console.log('  - Use --plan auto (or just omit --plan) for automatic plan detection');
     console.log('  - Make sure Claude Code is running and has created session data');
+  });
+
+// Add watch command for continuous monitoring
+program
+  .command('watch')
+  .description('Continuously monitor Claude usage with live updates')
+  .option('-p, --plan <type>', 'Subscription plan (pro, max5, max20, custom_max, auto)', 'auto')
+  .option('-d, --data-path <path>', 'Custom path to Claude data directory')
+  .option('-r, --refresh <seconds>', 'Refresh interval in seconds', '3')
+  .option('--no-auto-detect', 'Disable automatic plan detection')
+  .action(async (options) => {
+    // Handle plan detection (same as default command)
+    let plan: Plan = 'pro';
+
+    if (options.plan === 'auto' || (options.autoDetect && options.plan === 'pro')) {
+      console.log('🔍 Auto-detecting plan from usage history...');
+
+      try {
+        const dataLoader = new DataLoader(options.dataPath);
+        const sessionIdentifier = new SessionIdentifier();
+        const planDetector = new PlanDetector();
+
+        const entries = await dataLoader.loadUsageData();
+        const blocks = sessionIdentifier.createSessionBlocks(entries);
+        const analysis = planDetector.analyzePlanUsage(blocks);
+
+        plan = analysis.detectedPlan;
+
+        console.log(`✅ Detected plan: ${plan} (confidence: ${analysis.confidence})`);
+        if (analysis.recommendation) {
+          console.log(`💡 ${analysis.recommendation}`);
+        }
+        console.log(`📊 Max tokens used: ${analysis.maxTokensUsed.toLocaleString()}`);
+      } catch (_error) {
+        console.warn('⚠️  Could not auto-detect plan, using default (pro)');
+        plan = 'pro';
+      }
+    } else {
+      const validPlans: Plan[] = ['pro', 'max5', 'max20', 'custom_max'];
+      if (!validPlans.includes(options.plan as Plan)) {
+        console.error(`Invalid plan: ${options.plan}`);
+        console.error(`Valid plans are: ${validPlans.join(', ')}`);
+        process.exit(1);
+      }
+      plan = options.plan as Plan;
+    }
+
+    // Parse refresh interval
+    const refreshInterval = parseInt(options.refresh) * 1000;
+    if (Number.isNaN(refreshInterval) || refreshInterval < 1000) {
+      console.error('Refresh interval must be at least 1 second');
+      process.exit(1);
+    }
+
+    // Create and start monitor
+    const monitor = new Monitor({
+      plan,
+      dataPath: options.dataPath,
+      refreshInterval,
+    });
+
+    console.log('\n🚀 Starting Claude Code Usage Monitor...');
+    console.log(`📋 Plan: ${plan}`);
+    console.log(`🔄 Refresh interval: ${options.refresh}s`);
+
+    if (options.dataPath) {
+      console.log(`📁 Data path: ${options.dataPath}`);
+    }
+
+    try {
+      await monitor.start();
+    } catch (error) {
+      console.error('Failed to start monitor:', error);
+      process.exit(1);
+    }
   });
 
 program.parse();
