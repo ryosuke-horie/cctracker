@@ -44,28 +44,38 @@ describe('Monitor', () => {
 
   describe('runOnce', () => {
     it('should update once and exit without starting interval', async () => {
-      // This test will fail initially as runOnce method doesn't exist yet
       expect(monitor.runOnce).toBeDefined();
-      
+
       // Mock the private updateOnce method
       const updateOnceSpy = vi.spyOn(monitorWithPrivate, 'updateOnce').mockResolvedValue(undefined);
-      
+
       await monitor.runOnce();
-      
+
       // Should call updateOnce exactly once
       expect(updateOnceSpy).toHaveBeenCalledTimes(1);
-      
+
       // Should not set up any intervals
       expect(monitorWithPrivate.intervalId).toBeUndefined();
-      
+
       // Should not hide cursor (as it's a one-time run)
       expect(monitorWithPrivate.formatter.hideCursor).not.toHaveBeenCalled();
+    });
+
+    it('should not register signal handlers in runOnce mode', async () => {
+      const processSpy = vi.spyOn(process, 'on');
+      vi.spyOn(monitorWithPrivate, 'updateOnce').mockResolvedValue(undefined);
+
+      await monitor.runOnce();
+
+      // Should not register SIGINT or SIGTERM handlers
+      expect(processSpy).not.toHaveBeenCalledWith('SIGINT', expect.any(Function));
+      expect(processSpy).not.toHaveBeenCalledWith('SIGTERM', expect.any(Function));
     });
 
     it('should handle errors gracefully during runOnce', async () => {
       const errorMessage = 'Test error';
       vi.spyOn(monitorWithPrivate, 'updateOnce').mockRejectedValue(new Error(errorMessage));
-      
+
       await expect(monitor.runOnce()).rejects.toThrow(errorMessage);
     });
   });
@@ -73,20 +83,20 @@ describe('Monitor', () => {
   describe('start', () => {
     it('should set up continuous monitoring with interval', async () => {
       const updateSpy = vi.spyOn(monitorWithPrivate, 'update').mockResolvedValue(undefined);
-      
+
       // Start the monitor
       monitor.start();
-      
+
       // Initial update should be called
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
       expect(updateSpy).toHaveBeenCalledTimes(1);
-      
+
       // Should set up interval
       expect(monitorWithPrivate.intervalId).toBeDefined();
-      
+
       // Should hide cursor for continuous monitoring
       expect(monitorWithPrivate.formatter.hideCursor).toHaveBeenCalled();
-      
+
       // Clear interval without calling stop() to avoid process.exit
       clearInterval(monitorWithPrivate.intervalId);
       monitorWithPrivate.isRunning = false;
