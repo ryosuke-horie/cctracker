@@ -1,8 +1,16 @@
 import chalk from 'chalk';
 import { format } from 'date-fns';
+import type { Locale } from '../i18n/messages.js';
+import { messages as i18n } from '../i18n/messages.js';
 import type { BurnRate, Plan, SessionBlock } from '../models/types.js';
 
 export class Formatter {
+  private messages: typeof i18n[Locale];
+
+  constructor(locale: Locale = 'en') {
+    this.messages = i18n[locale];
+  }
+
   formatProgressBar(percentage: number, width = 40): string {
     const filled = Math.min(Math.round((percentage / 100) * width), width);
     const empty = Math.max(width - filled, 0);
@@ -22,11 +30,11 @@ export class Formatter {
 
   formatTokenStatus(currentTokens: number, limit: number, percentage: number): string {
     const status = percentage >= 90 ? '🔴' : percentage >= 50 ? '🟡' : '🟢';
-    return `${status} Tokens: ${this.formatNumber(currentTokens)} / ${this.formatNumber(limit)}`;
+    return `${status} ${this.messages.tokens}: ${this.formatNumber(currentTokens)} / ${this.formatNumber(limit)}`;
   }
 
   formatBurnRate(burnRate: BurnRate, indicator: string): string {
-    return `${indicator} Burn Rate: ${burnRate.tokensPerMinute.toFixed(1)} tokens/min`;
+    return `${indicator} ${this.messages.burnRate}: ${burnRate.tokensPerMinute.toFixed(1)} ${this.messages.tokensPerMin}`;
   }
 
   formatTimeRemaining(minutes: number): string {
@@ -34,14 +42,14 @@ export class Formatter {
     const mins = minutes % 60;
 
     if (hours > 0) {
-      return `${hours}h ${mins}m`;
+      return `${hours}${this.messages.hours} ${mins}${this.messages.minutes}`;
     }
-    return `${mins}m`;
+    return `${mins}${this.messages.minutes}`;
   }
 
   formatSessionInfo(activeBlock: SessionBlock | null): string {
     if (!activeBlock) {
-      return chalk.gray('No active session');
+      return chalk.gray(this.messages.noActiveSession);
     }
 
     const endTime = format(activeBlock.endTime, 'HH:mm');
@@ -50,7 +58,7 @@ export class Formatter {
       Math.floor((activeBlock.endTime.getTime() - Date.now()) / 60000)
     );
 
-    return `Session ends at ${chalk.cyan(endTime)} (${this.formatTimeRemaining(remainingMinutes)} remaining)`;
+    return `${this.messages.sessionEndsAt} ${chalk.cyan(endTime)} (${this.formatTimeRemaining(remainingMinutes)} ${this.messages.remaining})`;
   }
 
   formatWarning(message: string): string {
@@ -66,14 +74,7 @@ export class Formatter {
   }
 
   formatPlan(plan: Plan): string {
-    const planNames = {
-      pro: 'Claude Pro (~7k tokens)',
-      max5: 'Claude Max5 (~35k tokens)',
-      max20: 'Claude Max20 (~140k tokens)',
-      custom_max: 'Custom Max (auto-detected)',
-    };
-
-    return chalk.blue(planNames[plan]);
+    return chalk.blue(this.messages.planNames[plan]);
   }
 
   private formatNumber(num: number): string {
