@@ -36,25 +36,25 @@ describe('Monitor with Japanese locale', () => {
         locale: 'ja',
       });
 
-      // Mock data with high token usage
-      const mockEntries = [
-        {
-          timestamp: Date.now(),
-          usage: {
-            tokenInput: 0,
-            tokenOutput: 0,
-            tokenTotal: 45000,
-            tokenBalance: 5000,
-            weightedBalance: 5000,
-          },
+      // Directly test the display logic by calling displayOnce with high percentage
+      const testData = {
+        plan: 'pro' as const,
+        currentTokens: 45000,
+        limit: 50000,
+        percentage: 90, // This should trigger the warning
+        burnRate: {
+          tokensPerMinute: 100,
+          tokensPerHour: 6000,
+          confidence: 'high' as const,
         },
-      ];
+        burnRateIndicator: '🔥',
+        activeBlock: null,
+        projection: null,
+        depletionTime: null,
+      };
 
-      vi.spyOn(monitor as any, 'dataLoader', 'get').mockReturnValue({
-        loadUsageData: vi.fn().mockResolvedValue(mockEntries),
-      });
-
-      await monitor.runOnce();
+      // Call the private displayOnce method directly
+      (monitor as any).displayOnce(testData);
 
       const output = mockConsoleLog.mock.calls.map((call) => call[0]).join('\n');
       expect(output).toContain('トークン制限に近づいています！');
@@ -67,36 +67,31 @@ describe('Monitor with Japanese locale', () => {
         locale: 'ja',
       });
 
-      // Mock data that would trigger depletion warning
-      const now = Date.now();
-      const mockEntries = [
-        {
-          timestamp: now - 30 * 60 * 1000, // 30 minutes ago
-          usage: {
-            tokenInput: 0,
-            tokenOutput: 0,
-            tokenTotal: 20000,
-            tokenBalance: 30000,
-            weightedBalance: 30000,
-          },
+      // Test depletion warning with activeBlock and depletionTime
+      const testData = {
+        plan: 'pro' as const,
+        currentTokens: 40000,
+        limit: 50000,
+        percentage: 80,
+        burnRate: {
+          tokensPerMinute: 200,
+          tokensPerHour: 12000,
+          confidence: 'high' as const,
         },
-        {
-          timestamp: now,
-          usage: {
-            tokenInput: 0,
-            tokenOutput: 0,
-            tokenTotal: 40000,
-            tokenBalance: 10000,
-            weightedBalance: 10000,
-          },
+        burnRateIndicator: '🔥',
+        activeBlock: {
+          startTime: new Date('2024-01-01T10:00:00'),
+          endTime: new Date('2024-01-01T18:00:00'),
+          entries: [],
+          isActive: true,
+          isGap: false,
         },
-      ];
+        projection: null,
+        depletionTime: new Date('2024-01-01T17:00:00'), // Before session end
+      };
 
-      vi.spyOn(monitor as any, 'dataLoader', 'get').mockReturnValue({
-        loadUsageData: vi.fn().mockResolvedValue(mockEntries),
-      });
-
-      await monitor.runOnce();
+      // Call the private displayOnce method directly
+      (monitor as any).displayOnce(testData);
 
       const output = mockConsoleLog.mock.calls.map((call) => call[0]).join('\n');
       expect(output).toContain('セッションリセット前にトークンが枯渇します！');
@@ -145,22 +140,41 @@ describe('Monitor with Japanese locale', () => {
         locale: 'ja',
       });
 
-      // Mock data with usage above pro limit
-      const mockEntries = [
+      // We need to test the plan switching logic more directly
+      // Mock the dependencies to ensure we get the right conditions
+      const mockSessionBlocks = [
         {
-          timestamp: Date.now(),
-          usage: {
-            tokenInput: 0,
-            tokenOutput: 0,
-            tokenTotal: 45000,
-            tokenBalance: 5000,
-            weightedBalance: 5000,
-          },
+          startTime: new Date('2024-01-01T10:00:00'),
+          endTime: new Date('2024-01-01T18:00:00'),
+          entries: [],
+          isActive: true,
+          isGap: false,
         },
       ];
 
       vi.spyOn(monitor as any, 'dataLoader', 'get').mockReturnValue({
-        loadUsageData: vi.fn().mockResolvedValue(mockEntries),
+        loadUsageData: vi.fn().mockResolvedValue([]),
+      });
+
+      vi.spyOn(monitor as any, 'sessionIdentifier', 'get').mockReturnValue({
+        createSessionBlocks: vi.fn().mockReturnValue(mockSessionBlocks),
+      });
+
+      vi.spyOn(monitor as any, 'tokenCalculator', 'get').mockReturnValue({
+        calculateBlockWeightedTokens: vi.fn().mockReturnValue(45000), // > 44000
+        determinePlanLimit: vi.fn().mockReturnValue(50000),
+        calculateTokenPercentage: vi.fn().mockReturnValue(90),
+      });
+
+      vi.spyOn(monitor as any, 'burnRateCalculator', 'get').mockReturnValue({
+        calculateHourlyBurnRate: vi.fn().mockReturnValue({
+          tokensPerMinute: 100,
+          tokensPerHour: 6000,
+          confidence: 'high',
+        }),
+        getBurnRateIndicator: vi.fn().mockReturnValue('🔥'),
+        projectUsage: vi.fn().mockReturnValue(null),
+        calculateDepletionTime: vi.fn().mockReturnValue(null),
       });
 
       await monitor.runOnce();

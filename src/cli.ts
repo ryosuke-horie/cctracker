@@ -89,9 +89,10 @@ program
   .command('info')
   .description('Show information about Claude data paths and configuration')
   .option('-d, --data-path <path>', 'Custom path to Claude data directory')
-  .option('--ja', '日本語で表示')
-  .action(async (options) => {
-    const locale: Locale = options.ja ? 'ja' : 'en';
+  .action(async (options, command) => {
+    // Get locale from parent command (global options)
+    const parentOpts = command.parent?.opts() || {};
+    const locale: Locale = parentOpts.ja ? 'ja' : 'en';
     const msg = messages[locale];
     const { getDefaultDataPaths, discoverClaudeDataPaths } = await import(
       './utils/pathDiscovery.js'
@@ -154,9 +155,10 @@ program
   .option('-d, --data-path <path>', 'Custom path to Claude data directory')
   .option('-r, --refresh <seconds>', 'Refresh interval in seconds', '3')
   .option('--no-auto-detect', 'Disable automatic plan detection')
-  .option('--ja', '日本語で表示')
-  .action(async (options) => {
-    const locale: Locale = options.ja ? 'ja' : 'en';
+  .action(async (options, command) => {
+    // Get locale from parent command (global options)
+    const parentOpts = command.parent?.opts() || {};
+    const locale: Locale = parentOpts.ja ? 'ja' : 'en';
     const msg = messages[locale];
     // Handle plan detection (same as default command)
     let plan: Plan = 'pro';
