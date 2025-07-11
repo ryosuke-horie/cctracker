@@ -13,7 +13,7 @@ export const messages = {
       max20: 'Claude Max20 (~140k tokens)',
       custom_max: 'Custom Max (auto-detected)',
     },
-    
+
     // Monitor messages
     usageMonitor: 'Claude Code Usage Monitor',
     usageStatus: 'Claude Code Usage Status',
@@ -25,7 +25,7 @@ export const messages = {
     detectedUsageAboveProLimit: 'Detected usage above Pro limit. Switching to custom_max mode.',
     errorUpdatingMonitor: 'Error updating monitor',
     errorFetchingUsageData: 'Error fetching usage data',
-    
+
     // CLI messages
     autoDetectingPlan: 'Auto-detecting plan from usage history...',
     detectedPlan: 'Detected plan',
@@ -52,7 +52,7 @@ export const messages = {
     failedToStartMonitor: 'Failed to start monitor',
     unknownCommand: 'unknown command',
     seeHelp: 'See --help for available commands',
-    
+
     // Time formatting
     hours: 'h',
     minutes: 'm',
@@ -71,7 +71,7 @@ export const messages = {
       max20: 'Claude Max20 (~140k トークン)',
       custom_max: 'カスタム Max (自動検出)',
     },
-    
+
     // Monitor messages
     usageMonitor: 'Claude Code 使用状況モニター',
     usageStatus: 'Claude Code 使用状況',
@@ -80,10 +80,11 @@ export const messages = {
     pressCtrlCToExit: 'Ctrl+C で終了',
     tokensWillDeplete: 'セッションリセット前にトークンが枯渇します！',
     tokenLimitNearlyReached: 'トークン制限に近づいています！',
-    detectedUsageAboveProLimit: 'Pro制限を超える使用を検出しました。custom_maxモードに切り替えます。',
+    detectedUsageAboveProLimit:
+      'Pro制限を超える使用を検出しました。custom_maxモードに切り替えます。',
     errorUpdatingMonitor: 'モニター更新エラー',
     errorFetchingUsageData: '使用状況データの取得エラー',
-    
+
     // CLI messages
     autoDetectingPlan: '使用履歴からプランを自動検出中...',
     detectedPlan: '検出されたプラン',
@@ -110,7 +111,7 @@ export const messages = {
     failedToStartMonitor: 'モニターの開始に失敗しました',
     unknownCommand: '不明なコマンド',
     seeHelp: '利用可能なコマンドは --help を参照',
-    
+
     // Time formatting
     hours: '時間',
     minutes: '分',

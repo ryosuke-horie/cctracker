@@ -30,7 +30,7 @@ program
   .action(async (options) => {
     const locale: Locale = options.ja ? 'ja' : 'en';
     const msg = messages[locale];
-    
+
     // Handle plan detection
     let plan: Plan = 'pro';
 

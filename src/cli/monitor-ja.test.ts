@@ -108,7 +108,7 @@ describe('Monitor with Japanese locale', () => {
       const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
 
       await monitor.stop();
-      
+
       mockExit.mockRestore();
 
       const output = mockConsoleLog.mock.calls.map((call) => call[0]).join('\n');
@@ -180,7 +180,9 @@ describe('Monitor with Japanese locale', () => {
       await monitor.runOnce();
 
       const output = mockConsoleLog.mock.calls.map((call) => call[0]).join('\n');
-      expect(output).toContain('Pro制限を超える使用を検出しました。custom_maxモードに切り替えます。');
+      expect(output).toContain(
+        'Pro制限を超える使用を検出しました。custom_maxモードに切り替えます。'
+      );
       expect(output).not.toContain('Detected usage above Pro limit. Switching to custom_max mode.');
     });
 

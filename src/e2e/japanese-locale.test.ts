@@ -75,7 +75,7 @@ describe('Japanese locale support (--ja option)', () => {
 
   it('should display error messages in Japanese when --ja option is used with invalid plan', () => {
     const invalidPlan = 'invalid_plan';
-    
+
     try {
       execSync(`node "${cliPath}" --ja --plan ${invalidPlan}`, { encoding: 'utf-8' });
       // Should not reach here

@@ -22,7 +22,7 @@ export class Monitor {
   private tokenCalculator: TokenCalculator;
   private burnRateCalculator: BurnRateCalculator;
   private formatter: Formatter;
-  private messages: typeof messages[Locale];
+  private messages: (typeof messages)[Locale];
   private isRunning = false;
   private intervalId?: NodeJS.Timeout;
 
@@ -97,11 +97,7 @@ export class Monitor {
       // Check for plan auto-switching
       if (this.options.plan === 'pro' && currentTokens > 44000) {
         this.options.plan = 'custom_max';
-        console.log(
-          this.formatter.formatWarning(
-            this.messages.detectedUsageAboveProLimit
-          )
-        );
+        console.log(this.formatter.formatWarning(this.messages.detectedUsageAboveProLimit));
       }
 
       // Calculate projections
@@ -206,11 +202,7 @@ export class Monitor {
       // Check for plan auto-switching
       if (this.options.plan === 'pro' && currentTokens > 44000) {
         this.options.plan = 'custom_max';
-        console.log(
-          this.formatter.formatWarning(
-            this.messages.detectedUsageAboveProLimit
-          )
-        );
+        console.log(this.formatter.formatWarning(this.messages.detectedUsageAboveProLimit));
       }
 
       // Calculate projections

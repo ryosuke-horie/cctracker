@@ -5,7 +5,7 @@ import { messages as i18n } from '../i18n/messages.js';
 import type { BurnRate, Plan, SessionBlock } from '../models/types.js';
 
 export class Formatter {
-  private messages: typeof i18n[Locale];
+  private messages: (typeof i18n)[Locale];
 
   constructor(locale: Locale = 'en') {
     this.messages = i18n[locale];
