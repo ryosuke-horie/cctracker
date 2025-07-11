@@ -211,4 +211,13 @@ program
     }
   });
 
+// Parse and check for unknown commands
 program.parse();
+
+// Check if any arguments were not handled by commander
+const remainingArgs = program.args;
+if (remainingArgs.length > 0 && !['info', 'watch'].includes(remainingArgs[0])) {
+  console.error(`unknown command: ${remainingArgs[0]}`);
+  console.error('See --help for available commands');
+  process.exit(1);
+}
