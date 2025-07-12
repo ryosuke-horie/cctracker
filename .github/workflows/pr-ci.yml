@@ -63,7 +63,13 @@ jobs:
           
           FAILED_FILES=""
           
-          for test_file in src/**/*.test.ts; do
+          # List all test files first for debugging
+          echo "### Found test files:" >> $GITHUB_STEP_SUMMARY
+          find src -name "*.test.ts" | while read test_file; do
+            echo "- $test_file" >> $GITHUB_STEP_SUMMARY
+          done
+          
+          for test_file in $(find src -name "*.test.ts"); do
             if [[ -f "$test_file" ]]; then
               echo "Testing $test_file..." 
               if npx vitest run "$test_file" --reporter=verbose > "output_$(basename $test_file).txt" 2>&1; then
