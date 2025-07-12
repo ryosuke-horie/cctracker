@@ -97,7 +97,7 @@ jobs:
         id: test
         run: |
           echo "## Test Coverage" >> $GITHUB_STEP_SUMMARY
-          npm run test:coverage > coverage-output.txt 2>&1 || TEST_EXIT_CODE=$?
+          npm run test:run > coverage-output.txt 2>&1 || TEST_EXIT_CODE=$?
           
           # Display test results
           if grep -E "(Test Files|Tests)" coverage-output.txt; then
