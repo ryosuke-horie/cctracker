@@ -19,35 +19,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 8
-          
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          cache: 'npm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Run type check
         id: typecheck
         continue-on-error: true
         run: |
           echo "## Type Check" >> $GITHUB_STEP_SUMMARY
-          if pnpm run typecheck; then
+          if npm run typecheck; then
             echo "✅ Type check passed" >> $GITHUB_STEP_SUMMARY
             echo "status=success" >> $GITHUB_OUTPUT
           else
@@ -61,7 +43,7 @@ jobs:
         continue-on-error: true
         run: |
           echo "## Format Check" >> $GITHUB_STEP_SUMMARY
-          if pnpm run format:check; then
+          if npm run format:check; then
             echo "✅ Format check passed" >> $GITHUB_STEP_SUMMARY
             echo "status=success" >> $GITHUB_OUTPUT
           else
@@ -75,7 +57,7 @@ jobs:
         continue-on-error: true
         run: |
           echo "## Tests" >> $GITHUB_STEP_SUMMARY
-          pnpm run test:run > test-output.txt 2>&1 || TEST_EXIT_CODE=$?
+          npm run test:run > test-output.txt 2>&1 || TEST_EXIT_CODE=$?
           
           # Display test results
           if grep -E "(Test Files|Tests)" test-output.txt; then
