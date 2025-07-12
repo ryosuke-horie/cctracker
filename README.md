@@ -15,6 +15,7 @@ cctrackerは、Claude AIのトークン使用量をリアルタイムで監視�
 - 🤖 **自動プラン検出** - 過去の使用履歴から利用中のプランを自動判定
 - 📋 **複数プラン対応** - Pro、Max5、Max20、カスタムプランに対応
 - 🎯 **制限超過時の自動切り替え** - Pro制限を超えた場合、自動的にカスタム制限に適応
+- 🌐 **日本語表示対応** - `--ja`オプションで全てのメッセージを日本語で表示
 
 ## インストール
 
@@ -37,7 +38,18 @@ cctracker
 git clone https://github.com/yourusername/cctracker.git
 cd cctracker
 npm install
+
+# 開発モードで実行
 npm run dev
+
+# 開発モードでオプションを渡す（-- を使用してnpmとスクリプトのオプションを区切る）
+npm run dev -- --ja
+npm run dev -- watch --ja
+npm run dev -- info --ja
+
+# または直接実行
+npx tsx src/cli.ts --ja
+npx tsx src/cli.ts watch --ja
 ```
 
 ## 使い方
@@ -48,8 +60,14 @@ npm run dev
 # 現在の使用状況を確認（単発実行、デフォルト）
 npx cctracker
 
+# 日本語で表示
+npx cctracker --ja
+
 # 継続的に監視（watchモード）
 npx cctracker watch
+
+# watchモードで日本語表示
+npx cctracker watch --ja
 
 # watchモードで手動プランを指定
 npx cctracker watch --plan max5
@@ -65,6 +83,9 @@ npx cctracker --data-path /path/to/claude/data
 
 # 使用状況の詳細情報を確認
 npx cctracker info
+
+# 詳細情報を日本語で確認
+npx cctracker info --ja
 ```
 
 ### プランオプション
@@ -110,18 +131,34 @@ cctrackerは、モデルに応じて特殊な重み付けを行います：
 # ビルド
 npm run build
 
-# 開発モード
+# 開発モードで実行
 npm run dev
+
+# 開発モードでオプション付き実行
+npm run dev -- --ja
+npm run dev -- watch --plan max5
 
 # 型チェック
 npm run typecheck
 
-# リント
-npm run lint
+# Biomeでリント・フォーマット
+npm run check
+npm run check:fix
 
 # テスト
-npm test
+npm run test
+npm run test:run  # 単発実行
+npm run test:coverage  # カバレッジ付き
+
+# 全チェック（CI相当）
+npm run typecheck && npm run check && npm run build && npm run test:run
 ```
+
+### 開発時の注意点
+
+- オプションを`npm run dev`に渡す場合は`--`で区切る：`npm run dev -- --ja`
+- または直接実行する：`npx tsx src/cli.ts --ja`
+- Pre-pushフックで自動的にlint・test・typecheckが実行されます
 
 ## 要件
 
