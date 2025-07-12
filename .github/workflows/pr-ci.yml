@@ -1,0 +1,100 @@
+name: PR CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+
+# GitHub Actions無料枠節約のため、同一PRで複数実行時は前の実行をキャンセル
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-checks:
+    name: Quality Checks & Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Type check
+        id: typecheck
+        run: npm run typecheck
+      
+      - name: Biome check (lint + format)
+        id: lint-format
+        run: npm run check
+      
+      - name: Build check
+        id: build
+        run: npm run build
+      
+      - name: Run tests
+        id: tests
+        run: npm run test:run
+      
+      - name: Report results
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          echo "## 🔍 CI Results" > pr_comment.md
+          echo "" >> pr_comment.md
+          echo "| Check | Status |" >> pr_comment.md
+          echo "|-------|--------|" >> pr_comment.md
+          
+          # Check each step result based on step outcomes
+          if [ "${{ steps.typecheck.outcome }}" == "success" ]; then
+            echo "| Type Check | ✅ |" >> pr_comment.md
+          else
+            echo "| Type Check | ❌ |" >> pr_comment.md
+          fi
+          
+          if [ "${{ steps.lint-format.outcome }}" == "success" ]; then
+            echo "| Lint & Format | ✅ |" >> pr_comment.md
+          else
+            echo "| Lint & Format | ❌ |" >> pr_comment.md
+          fi
+          
+          if [ "${{ steps.build.outcome }}" == "success" ]; then
+            echo "| Build | ✅ |" >> pr_comment.md
+          else
+            echo "| Build | ❌ |" >> pr_comment.md
+          fi
+          
+          if [ "${{ steps.tests.outcome }}" == "success" ]; then
+            echo "| Tests | ✅ |" >> pr_comment.md
+          else
+            echo "| Tests | ❌ |" >> pr_comment.md
+          fi
+          echo "" >> pr_comment.md
+          
+          # Determine overall status
+          if [ "${{ steps.typecheck.outcome }}" == "success" ] && \
+             [ "${{ steps.lint-format.outcome }}" == "success" ] && \
+             [ "${{ steps.build.outcome }}" == "success" ] && \
+             [ "${{ steps.tests.outcome }}" == "success" ]; then
+            echo "_All checks passed! 🎉_" >> pr_comment.md
+          else
+            echo "_Some checks failed. Please review the logs above. 📝_" >> pr_comment.md
+          fi
+          
+          gh pr comment ${{ github.event.pull_request.number }} --body-file pr_comment.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

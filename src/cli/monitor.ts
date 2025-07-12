@@ -3,6 +3,8 @@ import { BurnRateCalculator } from '../core/burnRateCalculator.js';
 import { DataLoader } from '../core/dataLoader.js';
 import { SessionIdentifier } from '../core/sessionIdentifier.js';
 import { TokenCalculator } from '../core/tokenCalculator.js';
+import type { Locale } from '../i18n/messages.js';
+import { messages } from '../i18n/messages.js';
 import type { BurnRate, Plan, SessionBlock, UsageProjection } from '../models/types.js';
 import { Formatter } from './formatter.js';
 
@@ -10,6 +12,7 @@ interface MonitorOptions {
   plan: Plan;
   refreshInterval?: number;
   dataPath?: string;
+  locale?: Locale;
 }
 
 export class Monitor {
@@ -19,6 +22,7 @@ export class Monitor {
   private tokenCalculator: TokenCalculator;
   private burnRateCalculator: BurnRateCalculator;
   private formatter: Formatter;
+  private messages: (typeof messages)[Locale];
   private isRunning = false;
   private intervalId?: NodeJS.Timeout;
 
@@ -28,7 +32,8 @@ export class Monitor {
     this.sessionIdentifier = new SessionIdentifier();
     this.tokenCalculator = new TokenCalculator();
     this.burnRateCalculator = new BurnRateCalculator();
-    this.formatter = new Formatter();
+    this.formatter = new Formatter(options.locale || 'en');
+    this.messages = messages[options.locale || 'en'];
   }
 
   async start(): Promise<void> {
@@ -59,7 +64,7 @@ export class Monitor {
     }
 
     this.formatter.showCursor();
-    console.log(`\n${this.formatter.formatSuccess('Monitor stopped')}`);
+    console.log(`\n${this.formatter.formatSuccess(this.messages.monitorStopped)}`);
     process.exit(0);
   }
 
@@ -92,11 +97,7 @@ export class Monitor {
       // Check for plan auto-switching
       if (this.options.plan === 'pro' && currentTokens > 44000) {
         this.options.plan = 'custom_max';
-        console.log(
-          this.formatter.formatWarning(
-            'Detected usage above Pro limit. Switching to custom_max mode.'
-          )
-        );
+        console.log(this.formatter.formatWarning(this.messages.detectedUsageAboveProLimit));
       }
 
       // Calculate projections
@@ -128,7 +129,7 @@ export class Monitor {
     } catch (error) {
       console.error(
         this.formatter.formatError(
-          `Error updating monitor: ${error instanceof Error ? error.message : 'Unknown error'}`
+          `${this.messages.errorUpdatingMonitor}: ${error instanceof Error ? error.message : 'Unknown error'}`
         )
       );
     }
@@ -147,8 +148,8 @@ export class Monitor {
   }): void {
     this.formatter.clearScreen();
 
-    console.log('\n🎯 Claude Code Usage Monitor\n');
-    console.log(`Plan: ${this.formatter.formatPlan(data.plan)}`);
+    console.log(`\n🎯 ${this.messages.usageMonitor}\n`);
+    console.log(`${this.messages.plan}: ${this.formatter.formatPlan(data.plan)}`);
     console.log('─'.repeat(60));
 
     // Token usage
@@ -166,15 +167,15 @@ export class Monitor {
     // Warnings
     if (data.depletionTime && data.activeBlock) {
       if (isBefore(data.depletionTime, data.activeBlock.endTime)) {
-        console.log(this.formatter.formatWarning(`Tokens will deplete before session reset!`));
+        console.log(this.formatter.formatWarning(this.messages.tokensWillDeplete));
       }
     }
 
     if (data.percentage >= 90) {
-      console.log(this.formatter.formatWarning('Token limit nearly reached!'));
+      console.log(this.formatter.formatWarning(this.messages.tokenLimitNearlyReached));
     }
 
-    console.log(`\n${this.formatter.formatSuccess('Press Ctrl+C to exit')}`);
+    console.log(`\n${this.formatter.formatSuccess(this.messages.pressCtrlCToExit)}`);
   }
 
   private async updateOnce(): Promise<void> {
@@ -201,11 +202,7 @@ export class Monitor {
       // Check for plan auto-switching
       if (this.options.plan === 'pro' && currentTokens > 44000) {
         this.options.plan = 'custom_max';
-        console.log(
-          this.formatter.formatWarning(
-            'Detected usage above Pro limit. Switching to custom_max mode.'
-          )
-        );
+        console.log(this.formatter.formatWarning(this.messages.detectedUsageAboveProLimit));
       }
 
       // Calculate projections
@@ -237,7 +234,7 @@ export class Monitor {
     } catch (error) {
       console.error(
         this.formatter.formatError(
-          `Error fetching usage data: ${error instanceof Error ? error.message : 'Unknown error'}`
+          `${this.messages.errorFetchingUsageData}: ${error instanceof Error ? error.message : 'Unknown error'}`
         )
       );
     }
@@ -255,8 +252,8 @@ export class Monitor {
     depletionTime: Date | null;
   }): void {
     // No screen clear for single run
-    console.log('\n🎯 Claude Code Usage Status\n');
-    console.log(`Plan: ${this.formatter.formatPlan(data.plan)}`);
+    console.log(`\n🎯 ${this.messages.usageStatus}\n`);
+    console.log(`${this.messages.plan}: ${this.formatter.formatPlan(data.plan)}`);
     console.log('─'.repeat(60));
 
     // Token usage
@@ -274,12 +271,12 @@ export class Monitor {
     // Warnings
     if (data.depletionTime && data.activeBlock) {
       if (isBefore(data.depletionTime, data.activeBlock.endTime)) {
-        console.log(this.formatter.formatWarning(`Tokens will deplete before session reset!`));
+        console.log(this.formatter.formatWarning(this.messages.tokensWillDeplete));
       }
     }
 
     if (data.percentage >= 90) {
-      console.log(this.formatter.formatWarning('Token limit nearly reached!'));
+      console.log(this.formatter.formatWarning(this.messages.tokenLimitNearlyReached));
     }
     // No "Press Ctrl+C to exit" message for single run
   }

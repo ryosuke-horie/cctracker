@@ -8,6 +8,8 @@ import { Monitor } from './cli/monitor.js';
 import { DataLoader } from './core/dataLoader.js';
 import { PlanDetector } from './core/planDetector.js';
 import { SessionIdentifier } from './core/sessionIdentifier.js';
+import type { Locale } from './i18n/messages.js';
+import { messages } from './i18n/messages.js';
 import type { Plan } from './models/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -24,13 +26,17 @@ program
   .option('-p, --plan <type>', 'Subscription plan (pro, max5, max20, custom_max, auto)', 'auto')
   .option('-d, --data-path <path>', 'Custom path to Claude data directory')
   .option('--no-auto-detect', 'Disable automatic plan detection')
+  .option('--ja', '日本語で表示')
   .action(async (options) => {
+    const locale: Locale = options.ja ? 'ja' : 'en';
+    const msg = messages[locale];
+
     // Handle plan detection
     let plan: Plan = 'pro';
 
     if (options.plan === 'auto' || (options.autoDetect && options.plan === 'pro')) {
       // Auto-detect plan from usage data
-      console.log('🔍 Auto-detecting plan from usage history...');
+      console.log(`🔍 ${msg.autoDetectingPlan}`);
 
       try {
         const dataLoader = new DataLoader(options.dataPath);
@@ -43,21 +49,21 @@ program
 
         plan = analysis.detectedPlan;
 
-        console.log(`✅ Detected plan: ${plan} (confidence: ${analysis.confidence})`);
+        console.log(`✅ ${msg.detectedPlan}: ${plan} (${msg.confidence}: ${analysis.confidence})`);
         if (analysis.recommendation) {
           console.log(`💡 ${analysis.recommendation}`);
         }
-        console.log(`📊 Max tokens used: ${analysis.maxTokensUsed.toLocaleString()}`);
+        console.log(`📊 ${msg.maxTokensUsed}: ${analysis.maxTokensUsed.toLocaleString()}`);
       } catch (_error) {
-        console.warn('⚠️  Could not auto-detect plan, using default (pro)');
+        console.warn(`⚠️  ${msg.couldNotAutoDetect}`);
         plan = 'pro';
       }
     } else {
       // Validate manual plan option
       const validPlans: Plan[] = ['pro', 'max5', 'max20', 'custom_max'];
       if (!validPlans.includes(options.plan as Plan)) {
-        console.error(`Invalid plan: ${options.plan}`);
-        console.error(`Valid plans are: ${validPlans.join(', ')}`);
+        console.error(`${msg.invalidPlan}: ${options.plan}`);
+        console.error(`${msg.validPlans}: ${validPlans.join(', ')}`);
         process.exit(1);
       }
       plan = options.plan as Plan;
@@ -67,12 +73,13 @@ program
     const monitor = new Monitor({
       plan,
       dataPath: options.dataPath,
+      locale,
     });
 
     try {
       await monitor.runOnce();
     } catch (error) {
-      console.error('Failed to fetch usage data:', error);
+      console.error(`${msg.failedToFetchUsageData}:`, error);
       process.exit(1);
     }
   });
@@ -82,22 +89,26 @@ program
   .command('info')
   .description('Show information about Claude data paths and configuration')
   .option('-d, --data-path <path>', 'Custom path to Claude data directory')
-  .action(async (options) => {
+  .action(async (options, command) => {
+    // Get locale from parent command (global options)
+    const parentOpts = command.parent?.opts() || {};
+    const locale: Locale = parentOpts.ja ? 'ja' : 'en';
+    const msg = messages[locale];
     const { getDefaultDataPaths, discoverClaudeDataPaths } = await import(
       './utils/pathDiscovery.js'
     );
 
-    console.log('\n📍 Claude Data Paths:\n');
+    console.log(`\n📍 ${msg.dataPathsInfo}:\n`);
 
     const defaultPaths = getDefaultDataPaths();
-    console.log('Default paths:');
+    console.log(`${msg.defaultPaths}:`);
     defaultPaths.forEach((path) => console.log(`  - ${path}`));
 
     const discoveredPaths = await discoverClaudeDataPaths();
-    console.log('\nDiscovered paths:');
+    console.log(`\n${msg.discoveredPaths}:`);
 
     if (discoveredPaths.length === 0) {
-      console.log('  No Claude data directories found');
+      console.log(`  ${msg.noClaudeDataFound}`);
     } else {
       discoveredPaths.forEach((path) => console.log(`  ✅ ${path}`));
     }
@@ -113,27 +124,27 @@ program
         const blocks = sessionIdentifier.createSessionBlocks(entries);
         const analysis = planDetector.analyzePlanUsage(blocks);
 
-        console.log('\n📊 Usage Analysis:\n');
-        console.log(`Detected plan: ${analysis.detectedPlan}`);
-        console.log(`Max tokens used: ${analysis.maxTokensUsed.toLocaleString()} (weighted)`);
-        console.log(`Confidence: ${analysis.confidence}`);
+        console.log(`\n📊 ${msg.usageAnalysis}:\n`);
+        console.log(`${msg.detectedPlan}: ${analysis.detectedPlan}`);
+        console.log(`${msg.maxTokensUsed}: ${analysis.maxTokensUsed.toLocaleString()} (weighted)`);
+        console.log(`${msg.confidence}: ${analysis.confidence}`);
         if (analysis.recommendation) {
           console.log(`Note: ${analysis.recommendation}`);
         }
 
         // Estimate actual tokens
         const actualTokens = planDetector.estimateActualTokens(analysis.maxTokensUsed, blocks);
-        console.log(`Estimated actual tokens: ~${actualTokens.toLocaleString()}`);
+        console.log(`${msg.estimatedActualTokens}: ~${actualTokens.toLocaleString()}`);
       }
     } catch (_error) {
       // Silent fail - info command should work even without data
     }
 
-    console.log('\n💡 Tips:');
-    console.log('  - Use CLAUDE_DATA_PATH environment variable to set custom path');
-    console.log('  - Use --data-path option to override the default path');
-    console.log('  - Use --plan auto (or just omit --plan) for automatic plan detection');
-    console.log('  - Make sure Claude Code is running and has created session data');
+    console.log(`\n💡 ${msg.tips}:`);
+    console.log(`  - ${msg.tipEnvVar}`);
+    console.log(`  - ${msg.tipDataPath}`);
+    console.log(`  - ${msg.tipAutoDetect}`);
+    console.log(`  - ${msg.tipEnsureRunning}`);
   });
 
 // Add watch command for continuous monitoring
@@ -144,12 +155,16 @@ program
   .option('-d, --data-path <path>', 'Custom path to Claude data directory')
   .option('-r, --refresh <seconds>', 'Refresh interval in seconds', '3')
   .option('--no-auto-detect', 'Disable automatic plan detection')
-  .action(async (options) => {
+  .action(async (options, command) => {
+    // Get locale from parent command (global options)
+    const parentOpts = command.parent?.opts() || {};
+    const locale: Locale = parentOpts.ja ? 'ja' : 'en';
+    const msg = messages[locale];
     // Handle plan detection (same as default command)
     let plan: Plan = 'pro';
 
     if (options.plan === 'auto' || (options.autoDetect && options.plan === 'pro')) {
-      console.log('🔍 Auto-detecting plan from usage history...');
+      console.log(`🔍 ${msg.autoDetectingPlan}`);
 
       try {
         const dataLoader = new DataLoader(options.dataPath);
@@ -162,20 +177,20 @@ program
 
         plan = analysis.detectedPlan;
 
-        console.log(`✅ Detected plan: ${plan} (confidence: ${analysis.confidence})`);
+        console.log(`✅ ${msg.detectedPlan}: ${plan} (${msg.confidence}: ${analysis.confidence})`);
         if (analysis.recommendation) {
           console.log(`💡 ${analysis.recommendation}`);
         }
-        console.log(`📊 Max tokens used: ${analysis.maxTokensUsed.toLocaleString()}`);
+        console.log(`📊 ${msg.maxTokensUsed}: ${analysis.maxTokensUsed.toLocaleString()}`);
       } catch (_error) {
-        console.warn('⚠️  Could not auto-detect plan, using default (pro)');
+        console.warn(`⚠️  ${msg.couldNotAutoDetect}`);
         plan = 'pro';
       }
     } else {
       const validPlans: Plan[] = ['pro', 'max5', 'max20', 'custom_max'];
       if (!validPlans.includes(options.plan as Plan)) {
-        console.error(`Invalid plan: ${options.plan}`);
-        console.error(`Valid plans are: ${validPlans.join(', ')}`);
+        console.error(`${msg.invalidPlan}: ${options.plan}`);
+        console.error(`${msg.validPlans}: ${validPlans.join(', ')}`);
         process.exit(1);
       }
       plan = options.plan as Plan;
@@ -193,20 +208,21 @@ program
       plan,
       dataPath: options.dataPath,
       refreshInterval,
+      locale,
     });
 
-    console.log('\n🚀 Starting Claude Code Usage Monitor...');
-    console.log(`📋 Plan: ${plan}`);
-    console.log(`🔄 Refresh interval: ${options.refresh}s`);
+    console.log(`\n🚀 ${msg.startingMonitor}`);
+    console.log(`📋 ${msg.plan}: ${plan}`);
+    console.log(`🔄 ${msg.refreshInterval}: ${options.refresh}s`);
 
     if (options.dataPath) {
-      console.log(`📁 Data path: ${options.dataPath}`);
+      console.log(`📁 ${msg.dataPath}: ${options.dataPath}`);
     }
 
     try {
       await monitor.start();
     } catch (error) {
-      console.error('Failed to start monitor:', error);
+      console.error(`${msg.failedToStartMonitor}:`, error);
       process.exit(1);
     }
   });
@@ -217,7 +233,9 @@ program.parse();
 // Check if any arguments were not handled by commander
 const remainingArgs = program.args;
 if (remainingArgs.length > 0 && !['info', 'watch'].includes(remainingArgs[0])) {
-  console.error(`unknown command: ${remainingArgs[0]}`);
-  console.error('See --help for available commands');
+  const locale: Locale = process.argv.includes('--ja') ? 'ja' : 'en';
+  const msg = messages[locale];
+  console.error(`${msg.unknownCommand}: ${remainingArgs[0]}`);
+  console.error(msg.seeHelp);
   process.exit(1);
 }

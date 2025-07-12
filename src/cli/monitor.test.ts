@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Monitor } from './monitor.js';
 import type { Plan } from '../models/types.js';
+import { Monitor } from './monitor.js';
 
 // Type definition for testing private methods
 type MonitorWithPrivateMethods = Monitor & {

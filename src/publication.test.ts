@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
-import { readFile, access } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
+import { describe, expect, it } from 'vitest';
 
 const execAsync = promisify(exec);
 
@@ -15,7 +15,7 @@ describe('npm publication readiness', () => {
 
       expect(packageJson.name).toBe('cctracker');
       expect(packageJson.bin).toEqual({
-        cctracker: './dist/cli.js'
+        cctracker: './dist/cli.js',
       });
       expect(packageJson.files).toContain('dist/**/*');
     });
@@ -47,7 +47,7 @@ describe('npm publication readiness', () => {
     it('should generate executable CLI file in dist directory', async () => {
       // Build the project
       await execAsync('npm run build');
-      
+
       // Check if the CLI file exists
       const cliPath = join(process.cwd(), 'dist', 'cli.js');
       await expect(access(cliPath)).resolves.toBeUndefined();
@@ -55,10 +55,10 @@ describe('npm publication readiness', () => {
 
     it('should have executable permissions on CLI file', async () => {
       await execAsync('npm run build');
-      
+
       const cliPath = join(process.cwd(), 'dist', 'cli.js');
       const cliContent = await readFile(cliPath, 'utf-8');
-      
+
       // Check for shebang
       expect(cliContent.startsWith('#!/usr/bin/env node')).toBe(true);
     });
@@ -67,26 +67,26 @@ describe('npm publication readiness', () => {
   describe('npm pack validation', () => {
     it('should create valid npm package', async () => {
       await execAsync('npm run build');
-      
+
       // Create tarball
       const { stdout } = await execAsync('npm pack --dry-run');
-      
+
       // Verify package creation
       expect(stdout).toContain('cctracker-0.1.0.tgz');
     });
 
     it('should have correct package size', async () => {
       await execAsync('npm run build');
-      
+
       const { stdout, stderr } = await execAsync('npm pack --dry-run');
-      
+
       // npm pack output might be in stderr instead of stdout
       const output = stdout + stderr;
-      
+
       // Extract package info
       const lines = output.split('\n');
-      const packageInfoLine = lines.find(line => line.includes('package size'));
-      
+      const packageInfoLine = lines.find((line) => line.includes('package size'));
+
       expect(packageInfoLine).toBeTruthy();
       // Size should be reasonable (less than 1MB)
       if (packageInfoLine) {
@@ -104,10 +104,10 @@ describe('npm publication readiness', () => {
   describe('npx execution readiness', () => {
     it('should be executable via npx after local installation', async () => {
       await execAsync('npm run build');
-      
+
       // Link the package locally
       await execAsync('npm link');
-      
+
       try {
         // Test npx execution
         const { stdout } = await execAsync('npx cctracker --help');
@@ -132,15 +132,19 @@ describe('publication workflow validation', () => {
     });
 
     it('should pass all tests', async () => {
-      await expect(execAsync('npm run test:run -- --exclude "**/publication.test.ts"')).resolves.not.toThrow();
+      await expect(
+        execAsync('npm run test:run -- --exclude "**/publication.test.ts"')
+      ).resolves.not.toThrow();
     }, 30000);
 
     it('should maintain test coverage', async () => {
-      const { stdout } = await execAsync('npm run test:coverage -- --exclude "**/publication.test.ts"');
-      
+      const { stdout } = await execAsync(
+        'npm run test:coverage -- --exclude "**/publication.test.ts"'
+      );
+
       // Check coverage percentage
       const coverageMatch = stdout.match(/All files\s+\|\s+(\d+(?:\.\d+)?)/);
-      
+
       if (coverageMatch) {
         const coverage = parseFloat(coverageMatch[1]);
         expect(coverage).toBeGreaterThanOrEqual(89);
@@ -151,7 +155,7 @@ describe('publication workflow validation', () => {
   describe('publication documentation', () => {
     it('should have publication documentation', async () => {
       const docsPath = join(process.cwd(), 'docs');
-      
+
       // Check if publication docs exist (will be created in Green phase)
       await expect(async () => {
         await access(join(docsPath, 'パッケージ公開手順.md'));
