@@ -3,120 +3,64 @@ name: PR CI
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
 
-permissions:
-  contents: read
-  pull-requests: write
+# GitHub Actions無料枠節約のため、同一PRで複数実行時は前の実行をキャンセル
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  ci:
+  quality-checks:
+    name: Quality Checks & Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    permissions:
+      contents: read
+      pull-requests: write
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: 'npm'
-
+      
       - name: Install dependencies
         run: npm ci
-
-      - name: Run type check
-        id: typecheck
-        continue-on-error: true
-        run: |
-          echo "## Type Check" >> $GITHUB_STEP_SUMMARY
-          if npm run typecheck; then
-            echo "✅ Type check passed" >> $GITHUB_STEP_SUMMARY
-            echo "status=success" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Type check failed" >> $GITHUB_STEP_SUMMARY
-            echo "status=failure" >> $GITHUB_OUTPUT
-            exit 1
-          fi
-
-      - name: Run format check
-        id: format
-        continue-on-error: true
-        run: |
-          echo "## Format Check" >> $GITHUB_STEP_SUMMARY
-          if npm run format:check; then
-            echo "✅ Format check passed" >> $GITHUB_STEP_SUMMARY
-            echo "status=success" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Format check failed" >> $GITHUB_STEP_SUMMARY
-            echo "status=failure" >> $GITHUB_OUTPUT
-            exit 1
-          fi
-
+      
+      - name: Type check
+        run: npm run typecheck
+      
+      - name: Biome check (lint + format)
+        run: npm run check
+      
+      - name: Build check
+        run: npm run build
+      
       - name: Run tests
-        id: test
-        continue-on-error: true
+        run: npm run test:run
+      
+      - name: Coverage report
+        if: github.event_name == 'pull_request'
         run: |
-          echo "## Tests" >> $GITHUB_STEP_SUMMARY
-          echo "Running tests individually to avoid test interference..." >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ CI Results" > pr_comment.md
+          echo "" >> pr_comment.md
+          echo "| Check | Status |" >> pr_comment.md
+          echo "|-------|--------|" >> pr_comment.md
+          echo "| Type Check | ✅ |" >> pr_comment.md
+          echo "| Lint & Format | ✅ |" >> pr_comment.md
+          echo "| Build | ✅ |" >> pr_comment.md
+          echo "| Tests | ✅ |" >> pr_comment.md
+          echo "" >> pr_comment.md
+          echo "_All checks passed! 🎉_" >> pr_comment.md
           
-          FAILED_FILES=""
-          TOTAL_FILES=0
-          PASSED_FILES=0
-          
-          for test_file in $(find src -name "*.test.ts"); do
-            if [[ -f "$test_file" ]]; then
-              TOTAL_FILES=$((TOTAL_FILES + 1))
-              echo "Testing $test_file..." 
-              if npx vitest run "$test_file" --reporter=basic > /dev/null 2>&1; then
-                echo "✅ $test_file" >> $GITHUB_STEP_SUMMARY
-                PASSED_FILES=$((PASSED_FILES + 1))
-              else
-                echo "❌ $test_file" >> $GITHUB_STEP_SUMMARY
-                FAILED_FILES="$FAILED_FILES $test_file"
-              fi
-            fi
-          done
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Results**: $PASSED_FILES/$TOTAL_FILES test files passed" >> $GITHUB_STEP_SUMMARY
-          
-          if [ -n "$FAILED_FILES" ]; then
-            echo "status=failure" >> $GITHUB_OUTPUT
-            exit 1
-          else
-            echo "✅ All tests passed" >> $GITHUB_STEP_SUMMARY
-            echo "status=success" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Report status
-        if: always()
-        run: |
-          echo "## CI Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ steps.typecheck.outputs.status }}" = "success" ]; then
-            echo "| Type Check | ✅ |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Type Check | ❌ |" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [ "${{ steps.format.outputs.status }}" = "success" ]; then
-            echo "| Format | ✅ |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Format | ❌ |" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [ "${{ steps.test.outputs.status }}" = "success" ]; then
-            echo "| Tests | ✅ |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Tests | ❌ |" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          # Exit with error if any check failed
-          if [ "${{ steps.typecheck.outputs.status }}" != "success" ] || \
-             [ "${{ steps.format.outputs.status }}" != "success" ] || \
-             [ "${{ steps.test.outputs.status }}" != "success" ]; then
-            exit 1
-          fi
+          gh pr comment ${{ github.event.pull_request.number }} --body-file pr_comment.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
