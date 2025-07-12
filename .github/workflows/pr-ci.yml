@@ -57,21 +57,29 @@ jobs:
         continue-on-error: true
         run: |
           echo "## Tests" >> $GITHUB_STEP_SUMMARY
-          npm run test:run > test-output.txt 2>&1 || TEST_EXIT_CODE=$?
           
-          # Display test results summary
-          if grep -E "(Test Files|Tests)" test-output.txt; then
-            grep -E "(Test Files|Tests)" test-output.txt >> $GITHUB_STEP_SUMMARY
-          fi
+          # Test each file individually to identify which ones fail
+          echo "### Individual Test Results" >> $GITHUB_STEP_SUMMARY
           
-          # Display failed test details if any
-          if [ "${TEST_EXIT_CODE:-0}" -ne 0 ]; then
-            echo "❌ Tests failed" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Failed Test Details" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat test-output.txt >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
+          FAILED_FILES=""
+          
+          for test_file in src/**/*.test.ts; do
+            if [[ -f "$test_file" ]]; then
+              echo "Testing $test_file..." 
+              if npx vitest run "$test_file" --reporter=verbose > "output_$(basename $test_file).txt" 2>&1; then
+                echo "✅ $test_file" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "❌ $test_file" >> $GITHUB_STEP_SUMMARY
+                FAILED_FILES="$FAILED_FILES $test_file"
+                echo "### Failed: $test_file" >> $GITHUB_STEP_SUMMARY
+                echo '```' >> $GITHUB_STEP_SUMMARY
+                cat "output_$(basename $test_file).txt" >> $GITHUB_STEP_SUMMARY
+                echo '```' >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+          done
+          
+          if [ -n "$FAILED_FILES" ]; then
             echo "status=failure" >> $GITHUB_OUTPUT
             exit 1
           else
