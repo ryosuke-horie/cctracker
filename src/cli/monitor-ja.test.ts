@@ -1,5 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { BurnRateCalculator } from '../core/burnRateCalculator.js';
+import type { DataLoader } from '../core/dataLoader.js';
+import type { SessionIdentifier } from '../core/sessionIdentifier.js';
+import type { TokenCalculator } from '../core/tokenCalculator.js';
+import type { BurnRate, Plan, SessionBlock, UsageProjection } from '../models/types.js';
 import { Monitor } from './monitor.js';
+
+// Type interface for testing that exposes private properties
+interface MonitorWithPrivates extends Monitor {
+  dataLoader: DataLoader;
+  sessionIdentifier: SessionIdentifier;
+  tokenCalculator: TokenCalculator;
+  burnRateCalculator: BurnRateCalculator;
+  displayOnce: (data: {
+    plan: Plan;
+    currentTokens: number;
+    limit: number;
+    percentage: number;
+    burnRate: BurnRate;
+    burnRateIndicator: string;
+    activeBlock: SessionBlock | null;
+    projection: UsageProjection | null;
+    depletionTime: Date | null;
+  }) => void;
+}
 
 // Mock console methods
 const mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -18,7 +42,7 @@ describe('Monitor with Japanese locale', () => {
       });
 
       // Mock the data loader to avoid actual file access
-      vi.spyOn(monitor as any, 'dataLoader', 'get').mockReturnValue({
+      vi.spyOn(monitor as MonitorWithPrivates, 'dataLoader', 'get').mockReturnValue({
         loadUsageData: vi.fn().mockResolvedValue([]),
       });
 
@@ -54,7 +78,7 @@ describe('Monitor with Japanese locale', () => {
       };
 
       // Call the private displayOnce method directly
-      (monitor as any).displayOnce(testData);
+      (monitor as MonitorWithPrivates).displayOnce(testData);
 
       const output = mockConsoleLog.mock.calls.map((call) => call[0]).join('\n');
       expect(output).toContain('トークン制限に近づいています！');
@@ -91,7 +115,7 @@ describe('Monitor with Japanese locale', () => {
       };
 
       // Call the private displayOnce method directly
-      (monitor as any).displayOnce(testData);
+      (monitor as MonitorWithPrivates).displayOnce(testData);
 
       const output = mockConsoleLog.mock.calls.map((call) => call[0]).join('\n');
       expect(output).toContain('セッションリセット前にトークンが枯渇します！');
@@ -123,7 +147,7 @@ describe('Monitor with Japanese locale', () => {
       });
 
       // Mock data loader to throw error
-      vi.spyOn(monitor as any, 'dataLoader', 'get').mockReturnValue({
+      vi.spyOn(monitor as MonitorWithPrivates, 'dataLoader', 'get').mockReturnValue({
         loadUsageData: vi.fn().mockRejectedValue(new Error('Test error')),
       });
 
@@ -152,21 +176,21 @@ describe('Monitor with Japanese locale', () => {
         },
       ];
 
-      vi.spyOn(monitor as any, 'dataLoader', 'get').mockReturnValue({
+      vi.spyOn(monitor as MonitorWithPrivates, 'dataLoader', 'get').mockReturnValue({
         loadUsageData: vi.fn().mockResolvedValue([]),
       });
 
-      vi.spyOn(monitor as any, 'sessionIdentifier', 'get').mockReturnValue({
+      vi.spyOn(monitor as MonitorWithPrivates, 'sessionIdentifier', 'get').mockReturnValue({
         createSessionBlocks: vi.fn().mockReturnValue(mockSessionBlocks),
       });
 
-      vi.spyOn(monitor as any, 'tokenCalculator', 'get').mockReturnValue({
+      vi.spyOn(monitor as MonitorWithPrivates, 'tokenCalculator', 'get').mockReturnValue({
         calculateBlockWeightedTokens: vi.fn().mockReturnValue(45000), // > 44000
         determinePlanLimit: vi.fn().mockReturnValue(50000),
         calculateTokenPercentage: vi.fn().mockReturnValue(90),
       });
 
-      vi.spyOn(monitor as any, 'burnRateCalculator', 'get').mockReturnValue({
+      vi.spyOn(monitor as MonitorWithPrivates, 'burnRateCalculator', 'get').mockReturnValue({
         calculateHourlyBurnRate: vi.fn().mockReturnValue({
           tokensPerMinute: 100,
           tokensPerHour: 6000,
@@ -192,7 +216,7 @@ describe('Monitor with Japanese locale', () => {
         locale: 'ja',
       });
 
-      vi.spyOn(monitor as any, 'dataLoader', 'get').mockReturnValue({
+      vi.spyOn(monitor as MonitorWithPrivates, 'dataLoader', 'get').mockReturnValue({
         loadUsageData: vi.fn().mockResolvedValue([]),
       });
 

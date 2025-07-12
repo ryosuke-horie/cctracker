@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { promisify } from 'node:util';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const execAsync = promisify(exec);
 
@@ -45,8 +45,9 @@ describe('npx cctracker E2E tests', () => {
       try {
         await execAsync('node dist/cli.js unknown-command');
         expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        const errorOutput = error.stderr || error.stdout || error.message || '';
+      } catch (error: unknown) {
+        const execError = error as { stderr?: string; stdout?: string; message?: string };
+        const errorOutput = execError.stderr || execError.stdout || execError.message || '';
         expect(errorOutput).toContain('unknown command');
       }
     });

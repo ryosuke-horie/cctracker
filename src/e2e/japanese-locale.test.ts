@@ -80,8 +80,9 @@ describe('Japanese locale support (--ja option)', () => {
       execSync(`node "${cliPath}" --ja --plan ${invalidPlan}`, { encoding: 'utf-8' });
       // Should not reach here
       expect(false).toBe(true);
-    } catch (error: any) {
-      const output = error.stdout + error.stderr;
+    } catch (error: unknown) {
+      const execError = error as { stdout: string; stderr: string };
+      const output = execError.stdout + execError.stderr;
       expect(output).toContain('無効なプラン:');
       expect(output).toContain('有効なプラン:');
     }
