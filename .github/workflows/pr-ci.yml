@@ -36,30 +36,64 @@ jobs:
         run: npm ci
       
       - name: Type check
+        id: typecheck
         run: npm run typecheck
       
       - name: Biome check (lint + format)
+        id: lint-format
         run: npm run check
       
       - name: Build check
+        id: build
         run: npm run build
       
       - name: Run tests
+        id: tests
         run: npm run test:run
       
-      - name: Coverage report
-        if: github.event_name == 'pull_request'
+      - name: Report results
+        if: always() && github.event_name == 'pull_request'
         run: |
-          echo "## ✅ CI Results" > pr_comment.md
+          echo "## 🔍 CI Results" > pr_comment.md
           echo "" >> pr_comment.md
           echo "| Check | Status |" >> pr_comment.md
           echo "|-------|--------|" >> pr_comment.md
-          echo "| Type Check | ✅ |" >> pr_comment.md
-          echo "| Lint & Format | ✅ |" >> pr_comment.md
-          echo "| Build | ✅ |" >> pr_comment.md
-          echo "| Tests | ✅ |" >> pr_comment.md
+          
+          # Check each step result based on step outcomes
+          if [ "${{ steps.typecheck.outcome }}" == "success" ]; then
+            echo "| Type Check | ✅ |" >> pr_comment.md
+          else
+            echo "| Type Check | ❌ |" >> pr_comment.md
+          fi
+          
+          if [ "${{ steps.lint-format.outcome }}" == "success" ]; then
+            echo "| Lint & Format | ✅ |" >> pr_comment.md
+          else
+            echo "| Lint & Format | ❌ |" >> pr_comment.md
+          fi
+          
+          if [ "${{ steps.build.outcome }}" == "success" ]; then
+            echo "| Build | ✅ |" >> pr_comment.md
+          else
+            echo "| Build | ❌ |" >> pr_comment.md
+          fi
+          
+          if [ "${{ steps.tests.outcome }}" == "success" ]; then
+            echo "| Tests | ✅ |" >> pr_comment.md
+          else
+            echo "| Tests | ❌ |" >> pr_comment.md
+          fi
           echo "" >> pr_comment.md
-          echo "_All checks passed! 🎉_" >> pr_comment.md
+          
+          # Determine overall status
+          if [ "${{ steps.typecheck.outcome }}" == "success" ] && \
+             [ "${{ steps.lint-format.outcome }}" == "success" ] && \
+             [ "${{ steps.build.outcome }}" == "success" ] && \
+             [ "${{ steps.tests.outcome }}" == "success" ]; then
+            echo "_All checks passed! 🎉_" >> pr_comment.md
+          else
+            echo "_Some checks failed. Please review the logs above. 📝_" >> pr_comment.md
+          fi
           
           gh pr comment ${{ github.event.pull_request.number }} --body-file pr_comment.md
         env:
