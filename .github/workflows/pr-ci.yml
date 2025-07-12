@@ -59,14 +59,19 @@ jobs:
           echo "## Tests" >> $GITHUB_STEP_SUMMARY
           npm run test:run > test-output.txt 2>&1 || TEST_EXIT_CODE=$?
           
-          # Display test results
+          # Display test results summary
           if grep -E "(Test Files|Tests)" test-output.txt; then
             grep -E "(Test Files|Tests)" test-output.txt >> $GITHUB_STEP_SUMMARY
           fi
           
-          # Check if tests passed
+          # Display failed test details if any
           if [ "${TEST_EXIT_CODE:-0}" -ne 0 ]; then
             echo "❌ Tests failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Failed Test Details" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat test-output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
             echo "status=failure" >> $GITHUB_OUTPUT
             exit 1
           else
