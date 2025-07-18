@@ -1,0 +1,103 @@
+name: Cross-platform Testing
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# GitHub Actions無料枠節約のため、同一PRで複数実行時は前の実行をキャンセル
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Node ${{ matrix.node-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    
+    strategy:
+      fail-fast: false  # Continue running other matrix jobs even if one fails
+      matrix:
+        node-version: [18, 20, 22]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        exclude:
+          # Node 24 is not yet stable, so we'll skip it for now
+          # When Node 24 becomes LTS, we can add it back
+          - node-version: 24
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run lint
+        run: npm run lint
+      
+      - name: Run type check
+        run: npm run typecheck
+      
+      - name: Run tests
+        run: npm run test:run
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Test CLI help
+        run: npx cctracker --help
+
+  # Summary job to check if all matrix tests passed
+  matrix-summary:
+    name: Matrix Test Summary
+    if: always()
+    needs: test
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Check matrix results
+        id: check-results
+        run: |
+          if [[ "${{ needs.test.result }}" == "success" ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "All matrix tests passed! ✅"
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "Some matrix tests failed! ❌"
+          fi
+      
+      - name: Report PR comment
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "## 🔍 Matrix Test Results" > pr_comment.md
+          echo "" >> pr_comment.md
+          echo "### Tested Environments" >> pr_comment.md
+          echo "- **Node.js versions**: 18, 20, 22" >> pr_comment.md
+          echo "- **Operating Systems**: Ubuntu, Windows, macOS" >> pr_comment.md
+          echo "" >> pr_comment.md
+          
+          if [[ "${{ steps.check-results.outputs.status }}" == "success" ]]; then
+            echo "### ✅ All matrix tests passed!" >> pr_comment.md
+            echo "" >> pr_comment.md
+            echo "_All combinations of Node.js versions and operating systems are working correctly._ 🎉" >> pr_comment.md
+          else
+            echo "### ❌ Some matrix tests failed" >> pr_comment.md
+            echo "" >> pr_comment.md
+            echo "_Please check the workflow logs for details about which combinations failed._ 📝" >> pr_comment.md
+          fi
+          
+          gh pr comment ${{ github.event.pull_request.number }} --body-file pr_comment.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
